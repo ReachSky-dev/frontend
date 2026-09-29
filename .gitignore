@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .claude/
+.idea/
 .env
 .env.local
 .env.*.local
