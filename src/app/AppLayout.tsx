@@ -1,6 +1,12 @@
+import { useAuth } from 'react-oidc-context'
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import { AuthControl } from '../features/auth/AuthControl'
+import { getRealmRoles } from '../features/auth/roles'
 
 export function AppLayout() {
+  const auth = useAuth()
+  const isSeller = getRealmRoles(auth.user).includes('SELLER')
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
       <header className="border-b border-zinc-800 bg-zinc-950">
@@ -11,6 +17,7 @@ export function AppLayout() {
           >
             ReachSky
           </Link>
+
           <nav className="flex items-center gap-6">
             <NavLink
               to="/"
@@ -21,7 +28,19 @@ export function AppLayout() {
             >
               Oferty
             </NavLink>
+            {isSeller && (
+              <NavLink
+                to="/listings/new"
+                className={({ isActive }) =>
+                  `text-sm transition-colors ${isActive ? 'text-violet-400' : 'text-zinc-400 hover:text-zinc-100'}`
+                }
+              >
+                Nowy listing
+              </NavLink>
+            )}
           </nav>
+
+          <AuthControl />
         </div>
       </header>
 

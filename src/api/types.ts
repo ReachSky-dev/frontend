@@ -25,6 +25,13 @@ export interface PageDto<T> {
   size: number
 }
 
+export interface UserDto {
+  sub: string
+  displayName: string
+  email: string
+  roles: string[]
+}
+
 export interface ProblemDetail {
   type?: string
   title: string
