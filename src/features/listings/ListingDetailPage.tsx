@@ -12,11 +12,13 @@ type BadgeVariant = 'success' | 'warning' | 'error' | 'default'
 const statusVariant: Record<ListingStatus, BadgeVariant> = {
   DRAFT:  'default',
   ACTIVE: 'success',
+  CLOSED: 'error',
 }
 
 const statusLabel: Record<ListingStatus, string> = {
   DRAFT:  'Szkic',
   ACTIVE: 'Aktywny',
+  CLOSED: 'Zamknięte',
 }
 
 function ListingDetailSkeleton() {

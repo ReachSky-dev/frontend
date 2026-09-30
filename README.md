@@ -23,19 +23,19 @@ Aby uruchomic backend lokalnie, przejdz do repo `../backend` i postepuj zgodnie 
 
 ## Typy API
 
-Typy odpowiedzi API sa **generowane automatycznie z OpenAPI backendu** — nie sa przepisywane recznie.
+Typy odpowiedzi API sa **generowane automatycznie** ze specyfikacji OpenAPI backendu.
+Zrodlo prawdy: `../backend/docs/openapi.json`.
 
 ```bash
-# Po uruchomieniu backendu (backend musi byc dostepny na :8080):
-npm run generate-api
+npm run generate:api
 ```
 
-Nigdy nie edytuj recznie plikow w `src/api/generated/`.
-Rozjazd recznie utrzymywanych typow miedzy repo to najczestsze ciche awarie w projektach dwu-repo.
+Nigdy nie edytuj recznie plikow w `src/api/generated/` — sa nadpisywane przy kazdej regeneracji.
+Wygenerowane pliki sa commitowane, zeby CI budowal sie bez repozytorium backendu obok.
 
 Kolejnosc zmian kontraktu:
-1. backend: zmiana + test kontraktowy + zaktualizowany plik OpenAPI
-2. frontend: `npm run generate-api`, dostosowanie kodu
+1. backend: zmiana + test kontraktowy + aktualizacja `../backend/docs/openapi.json`
+2. frontend: `npm run generate:api`, dostosowanie kodu, commit
 
 ---
 

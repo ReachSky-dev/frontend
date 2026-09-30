@@ -1,40 +1,28 @@
-// NOTE: Typy pisane ręcznie na potrzeby faz 0–3.
-// W fazie 4 zastąpi je generator z OpenAPI backendu (npm run generate-api).
-// Po wdrożeniu generatora nie edytuj tego pliku ręcznie.
+// Typy generowane z ../backend/docs/openapi.json przez npm run generate:api
+// Nie edytuj ręcznie. Rozjazd naprawiasz po stronie backendu, potem regenerujesz.
+//
+// Uwaga: springdoc generuje wszystkie pola jako opcjonalne (brak `required` w schemacie).
+// Required<> poniżej odzwierciedla faktyczny kontrakt Javy — pola rekordu są non-null
+// zgodnie z ich typami (UUID, Instant, int, enum). Wyjątki opisane przy każdym typie.
 
-export type ListingStatus = 'DRAFT' | 'ACTIVE'
+import type { components } from './generated/schema'
 
-export interface ListingDto {
-  id: string
-  sellerId: string
-  title: string
-  description: string
-  windowStart: string    // ISO-8601 UTC (Instant)
-  windowEnd: string      // ISO-8601 UTC (Instant)
-  capacity: number
-  status: ListingStatus
-  createdAt: string
-}
+// ListingResponse — wszystkie pola non-null oprócz description (String bez @NotNull)
+type _Listing = components['schemas']['ListingResponse']
+export type ListingDto =
+  Required<Omit<_Listing, 'description'>> &
+  Pick<_Listing, 'description'>
 
-export interface PageDto<T> {
-  content: T[]
-  totalElements: number
-  totalPages: number
-  number: number           // bieżąca strona (0-indexed)
-  size: number
-}
+export type ListingStatus = components['schemas']['ListingStatus']
 
-export interface UserDto {
-  sub: string
-  displayName: string
-  email: string
-  roles: string[]
-}
+// CreateListingRequest — capacity opcjonalne w schemacie, ale @Min(1) w Javie = zawsze wysyłamy
+export type CreateListingRequest = components['schemas']['CreateListingRequest']
 
-export interface ProblemDetail {
-  type?: string
-  title: string
-  status: number
-  detail?: string
-  instance?: string
-}
+// UserProfileResponse — createdAt nullable (MeController przekazuje null)
+type _User = components['schemas']['UserProfileResponse']
+export type UserDto =
+  Required<Omit<_User, 'createdAt'>> &
+  Pick<_User, 'createdAt'>
+
+// ProblemDetail — używane tylko przez client.ts przez optional chaining (?.)
+export type ProblemDetail = components['schemas']['ProblemDetail']

@@ -56,6 +56,8 @@ Raport w tym samym formacie.
 - **Nie wyświetlaj czasu bez strefy.** Serwer zwraca `Instant` w ISO-8601 UTC,
   front konwertuje na strefę użytkownika przy wyświetlaniu.
 - **Nie refaktoruj poza zakresem zadania.**
+- **Nie pisz ręcznie typów odpowiedzi API.** Pochodzą z `src/api/generated/schema.ts`.
+  Rozjazd naprawiasz po stronie backendu, potem regenerujesz: `npm run generate:api`.
 - **Nie używaj `import.meta.env` do konfiguracji środowiskowej.** Konfiguracja
   przychodzi w runtime przez `window.__RUNTIME_CONFIG__` (plik `src/config.ts`).
   `import.meta.env` jest wypiekane w czasie builda — jeden obraz musi działać
