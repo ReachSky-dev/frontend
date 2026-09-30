@@ -4,14 +4,15 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthProvider } from 'react-oidc-context'
 import App from './App.tsx'
+import { config } from './config'
 import './index.css'
 
 const queryClient = new QueryClient()
 
 // Tokeny trzymane w pamięci aplikacji, nie w localStorage — per CLAUDE.md
 const oidcConfig = {
-  authority: import.meta.env.VITE_OIDC_AUTHORITY,
-  client_id: import.meta.env.VITE_OIDC_CLIENT_ID,
+  authority: config.oidcAuthority,
+  client_id: config.oidcClientId,
   redirect_uri: `${window.location.origin}/callback`,
   scope: 'openid profile email',
   userStore: new WebStorageStateStore({ store: new InMemoryWebStorage() }),

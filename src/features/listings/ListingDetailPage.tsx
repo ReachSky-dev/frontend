@@ -5,21 +5,18 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { formatDateTime } from '../../lib/datetime'
-import { formatMoney } from '../../lib/money'
 import { useListing } from './useListing'
 
 type BadgeVariant = 'success' | 'warning' | 'error' | 'default'
 
 const statusVariant: Record<ListingStatus, BadgeVariant> = {
-  ACTIVE:    'success',
-  INACTIVE:  'default',
-  SOLD_OUT:  'error',
+  DRAFT:  'default',
+  ACTIVE: 'success',
 }
 
 const statusLabel: Record<ListingStatus, string> = {
-  ACTIVE:    'Aktywny',
-  INACTIVE:  'Nieaktywny',
-  SOLD_OUT:  'Wyprzedany',
+  DRAFT:  'Szkic',
+  ACTIVE: 'Aktywny',
 }
 
 function ListingDetailSkeleton() {
@@ -37,7 +34,6 @@ function ListingDetailSkeleton() {
         <Skeleton className="h-16 rounded-lg" />
         <Skeleton className="h-16 rounded-lg" />
         <Skeleton className="h-16 rounded-lg" />
-        <Skeleton className="h-16 rounded-lg" />
       </div>
     </div>
   )
@@ -46,9 +42,9 @@ function ListingDetailSkeleton() {
 export function ListingDetailPage() {
   const { id } = useParams<{ id: string }>()
   const safeId = id ?? ''
-  const { data: listing, isLoading, isError, error, refetch } = useListing(safeId)
+  const { data: listing, isPending, isError, error, refetch } = useListing(safeId)
 
-  if (isLoading) {
+  if (isPending) {
     return <ListingDetailSkeleton />
   }
 
@@ -104,17 +100,11 @@ export function ListingDetailPage() {
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-4">
             <p className="text-xs text-zinc-500">Dostępne od</p>
-            <p className="mt-1 text-sm text-zinc-200">{formatDateTime(listing.availableFrom)}</p>
+            <p className="mt-1 text-sm text-zinc-200">{formatDateTime(listing.windowStart)}</p>
           </div>
           <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-4">
             <p className="text-xs text-zinc-500">Dostępne do</p>
-            <p className="mt-1 text-sm text-zinc-200">{formatDateTime(listing.availableTo)}</p>
-          </div>
-          <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-4">
-            <p className="text-xs text-zinc-500">Cena wywoławcza</p>
-            <p className="mt-1 text-sm font-semibold text-violet-400">
-              {formatMoney(listing.priceInMinorUnits, listing.currency)}
-            </p>
+            <p className="mt-1 text-sm text-zinc-200">{formatDateTime(listing.windowEnd)}</p>
           </div>
           <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-4">
             <p className="text-xs text-zinc-500">Dostępna liczba miejsc</p>

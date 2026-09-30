@@ -1,11 +1,11 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string
-  readonly VITE_OIDC_AUTHORITY: string
-  readonly VITE_OIDC_CLIENT_ID: string
+interface RuntimeConfig {
+  apiUrl: string
+  oidcAuthority: string
+  oidcClientId: string
 }
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv
+interface Window {
+  __RUNTIME_CONFIG__: RuntimeConfig
 }

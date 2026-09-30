@@ -2,19 +2,18 @@
 // W fazie 4 zastąpi je generator z OpenAPI backendu (npm run generate-api).
 // Po wdrożeniu generatora nie edytuj tego pliku ręcznie.
 
-export type ListingStatus = 'ACTIVE' | 'INACTIVE' | 'SOLD_OUT'
+export type ListingStatus = 'DRAFT' | 'ACTIVE'
 
 export interface ListingDto {
   id: string
+  sellerId: string
   title: string
   description: string
-  availableFrom: string    // ISO-8601 UTC (Instant)
-  availableTo: string      // ISO-8601 UTC (Instant)
+  windowStart: string    // ISO-8601 UTC (Instant)
+  windowEnd: string      // ISO-8601 UTC (Instant)
   capacity: number
-  priceInMinorUnits: number
-  currency: string         // ISO 4217, np. "PLN", "EUR"
   status: ListingStatus
-  sellerId: string
+  createdAt: string
 }
 
 export interface PageDto<T> {

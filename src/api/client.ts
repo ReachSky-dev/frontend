@@ -1,6 +1,7 @@
+import { config } from '../config'
 import type { ProblemDetail } from './types'
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
+const BASE_URL = config.apiUrl
 
 export class ApiError extends Error {
   readonly status: number

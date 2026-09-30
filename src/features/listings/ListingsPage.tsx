@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ApiError } from '../../api/client'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -23,10 +22,6 @@ function ListingsSkeleton() {
             <Skeleton className="h-3 w-1/2" />
             <Skeleton className="h-3 w-1/2" />
           </div>
-          <div className="flex justify-between">
-            <Skeleton className="h-5 w-20" />
-            <Skeleton className="h-4 w-16" />
-          </div>
         </div>
       ))}
     </div>
@@ -34,14 +29,14 @@ function ListingsSkeleton() {
 }
 
 export function ListingsPage() {
-  const [page, setPage] = useState(0)
-  const { data, isLoading, isError, error, refetch } = useListings(page)
+  const { data, isPending, isError, error, refetch } = useListings()
+  const listings = data ?? []
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold text-zinc-100">Oferty</h1>
 
-      {isLoading && <ListingsSkeleton />}
+      {isPending && <ListingsSkeleton />}
 
       {isError && (
         <div className="rounded-lg border border-red-800/50 bg-red-950/30 p-8 text-center">
@@ -56,44 +51,18 @@ export function ListingsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && (data?.content.length ?? 0) === 0 && (
+      {!isPending && !isError && listings.length === 0 && (
         <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-12 text-center">
           <p className="text-zinc-400">Brak aktywnych ofert.</p>
         </div>
       )}
 
-      {!isLoading && !isError && (data?.content.length ?? 0) > 0 && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data!.content.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
-
-          {(data!.totalPages ?? 0) > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <Button
-                variant="secondary"
-                buttonSize="sm"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-              >
-                ← Poprzednia
-              </Button>
-              <span className="text-sm text-zinc-400">
-                {page + 1} / {data!.totalPages}
-              </span>
-              <Button
-                variant="secondary"
-                buttonSize="sm"
-                onClick={() => setPage((p) => Math.min(data!.totalPages - 1, p + 1))}
-                disabled={page >= data!.totalPages - 1}
-              >
-                Następna →
-              </Button>
-            </div>
-          )}
-        </>
+      {!isPending && !isError && listings.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {listings.map((listing) => (
+            <ListingCard key={listing.id} listing={listing} />
+          ))}
+        </div>
       )}
     </div>
   )
