@@ -3,9 +3,13 @@ import { AppLayout } from './app/AppLayout'
 import { NotFoundPage } from './app/NotFoundPage'
 import { CallbackPage } from './features/auth/CallbackPage'
 import { RequireRole } from './features/auth/RequireRole'
+import { AuctionDetailPage } from './features/auctions/AuctionDetailPage'
+import { AuctionsPage } from './features/auctions/AuctionsPage'
+import { CreateAuctionPage } from './features/auctions/CreateAuctionPage'
 import { ListingDetailPage } from './features/listings/ListingDetailPage'
 import { ListingsPage } from './features/listings/ListingsPage'
 import { NewListingPage } from './features/listings/NewListingPage'
+import { SellerDashboardPage } from './features/seller/SellerDashboardPage'
 
 function App() {
   return (
@@ -20,6 +24,24 @@ function App() {
             element={
               <RequireRole role="SELLER">
                 <NewListingPage />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="listings/:id/auctions/new"
+            element={
+              <RequireRole role="SELLER">
+                <CreateAuctionPage />
+              </RequireRole>
+            }
+          />
+          <Route path="auctions" element={<AuctionsPage />} />
+          <Route path="auctions/:id" element={<AuctionDetailPage />} />
+          <Route
+            path="seller"
+            element={
+              <RequireRole role="SELLER">
+                <SellerDashboardPage />
               </RequireRole>
             }
           />

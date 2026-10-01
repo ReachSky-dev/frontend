@@ -39,6 +39,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auctions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all running auctions */
+        get: operations["listRunning"];
+        put?: never;
+        /** Create and schedule a new auction for an active listing */
+        post: operations["createAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auctions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an auction */
+        post: operations["cancelAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -48,6 +83,23 @@ export interface paths {
         };
         /** Current authenticated user profile */
         get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auctions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get auction by ID */
+        get: operations["getById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -100,6 +152,61 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        CreateAuctionRequest: {
+            /** Format: uuid */
+            listingId: string;
+            /** @enum {string} */
+            type: "ENGLISH" | "DUTCH";
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: int64 */
+            reservePriceAmount: number;
+            currency: string;
+            /** Format: int64 */
+            startPriceAmount: number;
+            /** Format: int64 */
+            minIncrementAmount?: number;
+            /** Format: int64 */
+            decrementAmount?: number;
+            /** Format: int64 */
+            stepSeconds?: number;
+            /** Format: int64 */
+            floorAmount?: number;
+        };
+        AuctionResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            listingId?: string;
+            /** Format: uuid */
+            sellerId?: string;
+            /** @enum {string} */
+            type?: components["schemas"]["AuctionType"];
+            /** @enum {string} */
+            status?: components["schemas"]["AuctionStatus"];
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC instant
+             */
+            startsAt?: string;
+            /**
+             * Format: date-time
+             * @description ISO-8601 UTC instant
+             */
+            endsAt?: string;
+            /** Format: int64 */
+            currentPriceAmount?: number;
+            currentPriceCurrency?: string;
+            /** Format: int64 */
+            decrementAmount?: number;
+            decrementCurrency?: string;
+            /** Format: int64 */
+            stepSeconds?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
         UserProfileResponse: {
             /** Format: uuid */
             id?: string;
@@ -118,6 +225,10 @@ export interface components {
             detail?: string;
             instance?: string;
         };
+        /** @enum {string} */
+        AuctionType: "ENGLISH" | "DUTCH";
+        /** @enum {string} */
+        AuctionStatus: "DRAFT" | "SCHEDULED" | "RUNNING" | "SOLD" | "RESERVE_NOT_MET" | "CANCELLED" | "SETTLED";
     };
     responses: never;
     parameters: never;
@@ -229,6 +340,108 @@ export interface operations {
             };
         };
     };
+    listRunning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"][];
+                };
+            };
+        };
+    };
+    createAuction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAuctionRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"];
+                };
+            };
+            /** @description SELLER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"];
+                };
+            };
+        };
+    };
+    cancelAuction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"];
+                };
+            };
+            /** @description SELLER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"];
+                };
+            };
+            /** @description Auction cannot be cancelled in its current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"];
+                };
+            };
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -245,6 +458,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UserProfileResponse"];
+                };
+            };
+        };
+    };
+    getById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Auction not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"];
                 };
             };
         };

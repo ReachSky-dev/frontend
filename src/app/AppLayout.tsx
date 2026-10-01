@@ -28,14 +28,22 @@ export function AppLayout() {
             >
               Oferty
             </NavLink>
+            <NavLink
+              to="/auctions"
+              className={({ isActive }) =>
+                `text-sm transition-colors ${isActive ? 'text-violet-400' : 'text-zinc-400 hover:text-zinc-100'}`
+              }
+            >
+              Aukcje
+            </NavLink>
             {isSeller && (
               <NavLink
-                to="/listings/new"
+                to="/seller"
                 className={({ isActive }) =>
                   `text-sm transition-colors ${isActive ? 'text-violet-400' : 'text-zinc-400 hover:text-zinc-100'}`
                 }
               >
-                Nowy listing
+                Panel sprzedawcy
               </NavLink>
             )}
           </nav>
