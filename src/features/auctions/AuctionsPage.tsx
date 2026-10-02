@@ -1,91 +1,61 @@
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import type { AuctionDto, AuctionStatus, AuctionType } from '../../api/types'
+import type { AuctionDto } from '../../api/types'
 import { Button } from '../../components/ui/Button'
+import { Countdown } from '../../components/ui/Countdown'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { StatusDot } from '../../components/ui/StatusDot'
-import type { StatusDotVariant } from '../../components/ui/StatusDot'
-import type { Column } from '../../components/ui/Table'
 import { Table } from '../../components/ui/Table'
+import type { Column } from '../../components/ui/Table'
 import { formatDateTime } from '../../lib/datetime'
 import { formatMoney } from '../../lib/money'
+import {
+  auctionStatusShape,
+  auctionStatusLabel,
+  auctionTypeLabel,
+} from './auctionMeta'
 import { useAuctions } from './useAuctions'
+import { useCountdown } from './useCountdown'
 
-const statusDotVariant: Record<AuctionStatus, StatusDotVariant> = {
-  DRAFT:           'default',
-  SCHEDULED:       'warn',
-  RUNNING:         'ok',
-  SOLD:            'ok',
-  RESERVE_NOT_MET: 'err',
-  CANCELLED:       'err',
-  SETTLED:         'default',
-}
-
-const statusLabel: Record<AuctionStatus, string> = {
-  DRAFT:           'Szkic',
-  SCHEDULED:       'Zaplanowana',
-  RUNNING:         'Trwa',
-  SOLD:            'Sprzedana',
-  RESERVE_NOT_MET: 'Rezerwacja niespełniona',
-  CANCELLED:       'Anulowana',
-  SETTLED:         'Rozliczona',
-}
-
-const typeLabel: Record<AuctionType, string> = {
-  ENGLISH: 'Angielska',
-  DUTCH:   'Holenderska',
-}
-
-const columns: Column<AuctionDto>[] = [
-  {
-    key: 'status',
-    label: 'Status',
-    render: a => <StatusDot variant={statusDotVariant[a.status]} label={statusLabel[a.status]} />,
-    className: 'w-44',
-  },
-  {
-    key: 'type',
-    label: 'Typ',
-    render: a => <span className="text-ink-2">{typeLabel[a.type]}</span>,
-    className: 'w-36',
-  },
-  {
-    key: 'price',
-    label: 'Cena',
-    render: a => (
-      <span className="tabular-nums font-medium text-ink-1">
-        {formatMoney(a.currentPriceAmount, a.currentPriceCurrency)}
-      </span>
-    ),
-    className: 'w-40',
-  },
-  {
-    key: 'endsAt',
-    label: 'Kończy się',
-    render: a => (
+// ── Komórka czasu — reguła wyświetlania: ─────────────────────────────────────
+// RUNNING   → odliczanie pozostałego czasu (Countdown)
+// SCHEDULED → data startu (kiedy się zacznie)
+// pozostałe → kreska (aukcja zakończona lub w szkicu)
+function TimeCell({ auction }: { auction: AuctionDto }) {
+  if (auction.status === 'RUNNING') {
+    return <RunningTime endsAt={auction.endsAt} />
+  }
+  if (auction.status === 'SCHEDULED') {
+    return (
       <span className="tabular-nums text-ink-2">
-        {formatDateTime(a.endsAt)}
+        start {formatDateTime(auction.startsAt)}
       </span>
-    ),
-  },
-]
+    )
+  }
+  return <span className="text-ink-3">—</span>
+}
 
-// ── Stany ładowania ──────────────────────────────────────────────────────────
+function RunningTime({ endsAt }: { endsAt: string }) {
+  const { h, m, s } = useCountdown(endsAt)
+  return <Countdown h={h} m={m} s={s} />
+}
 
+// ── Skeleton ─────────────────────────────────────────────────────────────────
 function AuctionsSkeleton() {
   return (
-    <div className="space-y-0">
+    <div>
       <div className="border-b border-line pb-3">
         <div className="flex gap-8">
-          {[44, 36, 40, 56].map((w, i) => (
-            <Skeleton key={i} className={`h-4 w-${w}`} />
-          ))}
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-36" />
         </div>
       </div>
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-8 border-b border-line py-3 last:border-0">
           <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-4 w-36" />
         </div>
@@ -94,12 +64,53 @@ function AuctionsSkeleton() {
   )
 }
 
-// ── Strona ───────────────────────────────────────────────────────────────────
-
+// ── Strona ────────────────────────────────────────────────────────────────────
 export function AuctionsPage() {
   const navigate = useNavigate()
   const { data, isPending, isError, error, refetch } = useAuctions()
   const auctions = data ?? []
+
+  // Kolumny zdefiniowane wewnątrz komponentu — pewne zamknięcie nad importami.
+  const columns: Column<AuctionDto>[] = [
+    {
+      key: 'status',
+      label: 'Status',
+      render: a => (
+        <StatusDot
+          shape={auctionStatusShape[a.status]}
+          label={auctionStatusLabel[a.status]}
+        />
+      ),
+      className: 'w-48',
+    },
+    {
+      key: 'type',
+      label: 'Typ',
+      // Wartość z API: "ENGLISH" | "DUTCH". Fallback na wartość surową gdy
+      // backend zwróci nieznany wariant (nie powinno się zdarzyć).
+      render: a => (
+        <span className="text-ink-2">
+          {auctionTypeLabel[a.type] ?? String(a.type)}
+        </span>
+      ),
+      className: 'w-32',
+    },
+    {
+      key: 'price',
+      label: 'Cena',
+      render: a => (
+        <span className="tabular-nums font-medium text-ink-1">
+          {formatMoney(a.currentPriceAmount, a.currentPriceCurrency)}
+        </span>
+      ),
+      className: 'w-40',
+    },
+    {
+      key: 'time',
+      label: 'Kończy się',
+      render: a => <TimeCell auction={a} />,
+    },
+  ]
 
   return (
     <div>

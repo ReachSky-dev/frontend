@@ -2,102 +2,203 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { ApiError } from '../../api/client'
-import type { AuctionDto, AuctionStatus, AuctionType } from '../../api/types'
-import { Badge } from '../../components/ui/Badge'
+import type { AuctionDto } from '../../api/types'
 import { Button } from '../../components/ui/Button'
+import { Countdown } from '../../components/ui/Countdown'
+import { PriceDisplay } from '../../components/ui/PriceDisplay'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { StatusDot } from '../../components/ui/StatusDot'
 import { formatDateTime } from '../../lib/datetime'
 import { formatMoney } from '../../lib/money'
 import { useCancelAuction } from './useCancelAuction'
 import { useAuction } from './useAuction'
+import { useCountdown } from './useCountdown'
+import {
+  auctionStatusLabel,
+  auctionStatusShape,
+  auctionTypeLabel,
+} from './auctionMeta'
 
-type BadgeVariant = 'success' | 'warning' | 'error' | 'default'
-
-const statusVariant: Record<AuctionStatus, BadgeVariant> = {
-  DRAFT:            'default',
-  SCHEDULED:        'warning',
-  RUNNING:          'success',
-  SOLD:             'success',
-  RESERVE_NOT_MET:  'error',
-  CANCELLED:        'error',
-  SETTLED:          'default',
-}
-
-const statusLabel: Record<AuctionStatus, string> = {
-  DRAFT:            'Szkic',
-  SCHEDULED:        'Zaplanowana',
-  RUNNING:          'Trwa',
-  SOLD:             'Sprzedana',
-  RESERVE_NOT_MET:  'Rez. niespełniona',
-  CANCELLED:        'Anulowana',
-  SETTLED:          'Rozliczona',
-}
-
-const typeLabel: Record<AuctionType, string> = {
-  ENGLISH: 'Aukcja angielska',
-  DUTCH:   'Aukcja holenderska',
-}
-
-// ── Odliczanie ─────────────────────────────────────────────────────────────────
-// Służy wyłącznie wyświetleniu pozostałego czasu.
-// Status aukcji (RUNNING → SOLD itp.) pochodzi z serwera, nigdy z porównania dat.
-function useCountdown(endsAt: string) {
-  const [remaining, setRemaining] = useState(() =>
-    Math.max(0, new Date(endsAt).getTime() - Date.now()),
-  )
-
-  useEffect(() => {
-    // Resetuj po zmianie endsAt (np. nowe dane z serwera)
-    setRemaining(Math.max(0, new Date(endsAt).getTime() - Date.now()))
-
-    const id = setInterval(() => {
-      const ms = Math.max(0, new Date(endsAt).getTime() - Date.now())
-      setRemaining(ms)
-      if (ms === 0) clearInterval(id)
-    }, 1_000)
-
-    return () => clearInterval(id)
-  }, [endsAt])
-
-  const h = Math.floor(remaining / 3_600_000)
-  const m = Math.floor((remaining % 3_600_000) / 60_000)
-  const s = Math.floor((remaining % 60_000) / 1_000)
-  return { h, m, s, remaining }
-}
-
-// ── Skeleton ───────────────────────────────────────────────────────────────────
+// ── Szkielet ładowania ─────────────────────────────────────────────────────────
 function AuctionDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-8 w-1/2" />
-      <div className="grid grid-cols-2 gap-3">
+    <div className="mx-auto max-w-3xl space-y-8">
+      <Skeleton className="h-4 w-24" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-6 w-24" />
+      </div>
+      <Skeleton className="h-48 rounded-lg" />
+      <div className="grid grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-16 rounded-lg" />
+          <Skeleton key={i} className="h-12" />
         ))}
       </div>
     </div>
   )
 }
 
-// ── Zawartość po załadowaniu aukcji ────────────────────────────────────────────
-// Wydzielona, żeby hooki były wywoływane zawsze z defined auction — bez dummy objects.
-function AuctionDetail({
-  auction,
-  refetch,
+// ── Odliczanie do następnego kroku — wyłącznie wizualne ───────────────────────
+function StepCountdown({ startsAt, stepSeconds }: { startsAt: string; stepSeconds: number }) {
+  const [msToStep, setMsToStep] = useState(() => {
+    const elapsed = (Date.now() - new Date(startsAt).getTime()) / 1_000
+    return Math.max(0, (Math.ceil(elapsed / stepSeconds) * stepSeconds - elapsed) * 1_000)
+  })
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const elapsed = (Date.now() - new Date(startsAt).getTime()) / 1_000
+      setMsToStep(Math.max(0, (Math.ceil(elapsed / stepSeconds) * stepSeconds - elapsed) * 1_000))
+    }, 500)
+    return () => clearInterval(id)
+  }, [startsAt, stepSeconds])
+
+  const s = Math.ceil(msToStep / 1_000)
+  return (
+    <div className="text-center">
+      <p className="text-xs text-ink-3">Następna obniżka za</p>
+      <p className="tabular-nums text-xl font-medium text-ink-2">{s} s</p>
+    </div>
+  )
+}
+
+// ── Wykres schodkowy ceny (SVG, bez wygładzania) ───────────────────────────────
+// Tylko dla aukcji holenderskiej — wizualizuje mechanizm opadania ceny.
+// Ceny obliczane lokalnie z parametrów aukcji; nie pobieramy historii z API.
+function PriceChart({
+  startsAt,
+  endsAt,
+  currentPriceAmount,
+  decrementAmount,
+  stepSeconds,
+  currency,
 }: {
-  auction: AuctionDto
-  refetch: () => void
+  startsAt: string
+  endsAt: string
+  currentPriceAmount: number
+  decrementAmount: number
+  stepSeconds: number
+  currency: string
 }) {
+  const startMs  = new Date(startsAt).getTime()
+  const endMs    = new Date(endsAt).getTime()
+  const totalMs  = endMs - startMs
+  if (totalMs <= 0) return null
+
+  const nowMs = Math.min(Date.now(), endMs)
+
+  // Odtwórz cenę startową z aktualnej ceny i liczby minionych kroków
+  const elapsedSec    = Math.max(0, (nowMs - startMs) / 1_000)
+  const stepsDone     = Math.floor(elapsedSec / stepSeconds)
+  const initialPrice  = currentPriceAmount + stepsDone * decrementAmount
+
+  // Wygeneruj wszystkie kroki [ { ms, price } ]
+  type Step = { ms: number; price: number }
+  const steps: Step[] = []
+  const stepMs = stepSeconds * 1_000
+  let t = startMs
+  let p = initialPrice
+  while (t < endMs) {
+    steps.push({ ms: t, price: p })
+    t += stepMs
+    p  = Math.max(0, p - decrementAmount)
+  }
+  steps.push({ ms: endMs, price: steps[steps.length - 1].price })
+
+  const prices  = steps.map(s => s.price)
+  const maxP    = Math.max(...prices)
+  const minP    = Math.min(...prices)
+  const pRange  = maxP - minP || 1
+
+  // SVG viewport
+  const W  = 600
+  const H  = 80
+  const pL = 4; const pR = 4; const pT = 6; const pB = 6
+  const cW = W - pL - pR
+  const cH = H - pT - pB
+
+  function toX(ms: number)  { return pL + ((ms - startMs) / totalMs) * cW }
+  function toY(price: number) { return pT + cH - ((price - minP) / pRange) * cH }
+
+  // Zbuduj punkty polyline — funkcja schodkowa (bez wygładzania)
+  const pts: string[] = []
+  for (let i = 0; i < steps.length - 1; i++) {
+    const curr = steps[i]
+    const next = steps[i + 1]
+    if (i === 0) pts.push(`${toX(curr.ms).toFixed(1)},${toY(curr.price).toFixed(1)}`)
+    // Poziomy odcinek do czasu następnego kroku (cena stała)
+    pts.push(`${toX(next.ms).toFixed(1)},${toY(curr.price).toFixed(1)}`)
+    // Pionowy spadek do nowej ceny
+    pts.push(`${toX(next.ms).toFixed(1)},${toY(next.price).toFixed(1)}`)
+  }
+
+  const nowX = toX(nowMs)
+
+  return (
+    <div>
+      <p className="mb-2 text-xs text-ink-3">Historia ceny</p>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="w-full"
+        style={{ height: '80px' }}
+        aria-label="Wykres schodkowy ceny aukcji holenderskiej"
+      >
+        {/* Linia schodkowa */}
+        <polyline
+          points={pts.join(' ')}
+          fill="none"
+          stroke="var(--color-line-hi)"
+          strokeWidth="1.5"
+          strokeLinejoin="miter"
+        />
+        {/* Marker bieżącego czasu */}
+        <line
+          x1={nowX} y1={pT}
+          x2={nowX} y2={pT + cH}
+          stroke="var(--color-price)"
+          strokeWidth="1"
+          strokeDasharray="3,2"
+        />
+        {/* Etykiety cen (min / max) */}
+        <text
+          x={pL} y={toY(maxP) - 2}
+          fontSize="8" fill="var(--color-ink-3)" dominantBaseline="auto"
+        >
+          {formatMoney(maxP, currency)}
+        </text>
+        <text
+          x={pL} y={toY(minP) + 10}
+          fontSize="8" fill="var(--color-ink-3)"
+        >
+          {formatMoney(minP, currency)}
+        </text>
+      </svg>
+    </div>
+  )
+}
+
+// ── Komórka informacji ─────────────────────────────────────────────────────────
+function InfoCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-ink-3">{label}</dt>
+      <dd className="mt-0.5 text-sm tabular-nums text-ink-1">{value}</dd>
+    </div>
+  )
+}
+
+// ── Główna zawartość (po załadowaniu aukcji) ───────────────────────────────────
+// Wydzielona, żeby hooki były zawsze wywoływane z defined auction.
+function AuctionDetail({ auction, refetch }: { auction: AuctionDto; refetch: () => void }) {
   const auth = useAuth()
   const { mutate: cancel, isPending: isCancelling } = useCancelAuction()
   const [cancelError, setCancelError] = useState<string | null>(null)
 
   const countdown = useCountdown(auction.endsAt)
 
-  // Wymuś refetch dokładnie na granicy kroku cenowego (aukcja holenderska).
+  // Wymuś refetch na granicy kroku cenowego (aukcja holenderska).
   // Cena holenderska jest SCHODKOWA — klient jej nie liczy, backend jest źródłem prawdy.
-  // Localnie liczymy tylko czas do następnej granicy, żeby refetch trafił o właściwej chwili.
   useEffect(() => {
     if (auction.type !== 'DUTCH' || auction.status !== 'RUNNING') return
     const { stepSeconds, startsAt } = auction
@@ -105,123 +206,122 @@ function AuctionDetail({
 
     const elapsedSec = (Date.now() - new Date(startsAt).getTime()) / 1_000
     const nextStepMs = (Math.ceil(elapsedSec / stepSeconds) * stepSeconds - elapsedSec) * 1_000
-    const delay = Math.max(nextStepMs, 0) + 200 // 200 ms buforu po skoku
+    const delay = Math.max(nextStepMs, 0) + 200 // 200 ms buforu
 
     const id = setTimeout(() => { void refetch() }, delay)
     return () => clearTimeout(id)
   }, [auction, refetch])
 
-  // UWAGA: Widoczność przycisku anulowania to tylko UI — backend waliduje każde żądanie
-  // niezależnie od roli i własności po stronie klienta.
+  // UWAGA: Widoczność przycisku anulowania to tylko UI — backend waliduje po stronie serwera.
   const currentUserId = auth.user?.profile.sub
-  const isOwner = auction.sellerId === currentUserId
+  const isOwner  = auction.sellerId === currentUserId
   const canCancel = isOwner && (auction.status === 'SCHEDULED' || auction.status === 'RUNNING')
 
   function handleCancel() {
     setCancelError(null)
     cancel(auction.id, {
-      onError: (err) => {
-        setCancelError(err instanceof ApiError ? err.title : 'Nie udało się anulować aukcji')
+      onError: err => {
+        setCancelError(err instanceof ApiError ? err.title : 'Nie udało się anulować aukcji.')
       },
     })
   }
 
+  const isDutch = auction.type === 'DUTCH'
+  const hasDutchData = isDutch
+    && typeof auction.decrementAmount === 'number'
+    && typeof auction.stepSeconds === 'number'
+
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-3xl">
       <BackLink />
 
-      <div className="mt-6 space-y-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className="mt-6 space-y-8">
+
+        {/* Nagłówek */}
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-zinc-500">{typeLabel[auction.type]}</p>
-            <h1 className="mt-1 text-2xl font-semibold text-zinc-100">Aukcja</h1>
+            <p className="text-sm text-ink-3">{auctionTypeLabel[auction.type]}</p>
+            <h1 className="mt-0.5 text-2xl font-semibold text-ink-1">Aukcja</h1>
           </div>
-          <Badge variant={statusVariant[auction.status]}>{statusLabel[auction.status]}</Badge>
+          <StatusDot
+            shape={auctionStatusShape[auction.status]}
+            label={auctionStatusLabel[auction.status]}
+          />
         </div>
 
-        {/* Cena bieżąca — wartość z serwera, odświeżana co 5 s (refetchInterval).
-            Cena holenderska jest schodkowa; klient jej nie interpoluje. */}
-        <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-6 text-center">
-          <p className="text-sm text-zinc-500">Cena bieżąca</p>
-          <p className="mt-2 text-4xl font-bold text-violet-400">
-            {formatMoney(auction.currentPriceAmount, auction.currentPriceCurrency)}
-          </p>
+        {/* Blok ceny — dominanta ekranu */}
+        <div className="rounded-lg border border-line bg-layer p-8 text-center">
+          <PriceDisplay
+            amount={auction.currentPriceAmount}
+            currency={auction.currentPriceCurrency}
+            label="Cena bieżąca"
+          />
 
-          {auction.status === 'RUNNING' && countdown.remaining > 0 && (
-            <p className="mt-2 text-sm text-zinc-500">
-              Koniec za:{' '}
-              <span className="font-mono text-zinc-300">
-                {String(countdown.h).padStart(2, '0')}:{String(countdown.m).padStart(2, '0')}:{String(countdown.s).padStart(2, '0')}
-              </span>
-            </p>
-          )}
-
-          {auction.type === 'DUTCH' && auction.status === 'RUNNING' &&
-           typeof auction.stepSeconds === 'number' && (
-            <StepCountdown startsAt={auction.startsAt} stepSeconds={auction.stepSeconds} />
+          {/* Odliczania — obok siebie pod ceną */}
+          {auction.status === 'RUNNING' && (
+            <div className={`mt-6 flex justify-center gap-12 ${hasDutchData ? '' : ''}`}>
+              {countdown.remaining > 0 && (
+                <Countdown h={countdown.h} m={countdown.m} s={countdown.s} label="Koniec za" />
+              )}
+              {hasDutchData && (
+                <StepCountdown
+                  startsAt={auction.startsAt}
+                  stepSeconds={auction.stepSeconds!}
+                />
+              )}
+            </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <InfoCell label="Start" value={formatDateTime(auction.startsAt)} />
+        {/* Siatka parametrów */}
+        <dl className={`grid gap-6 ${hasDutchData ? 'grid-cols-4' : 'grid-cols-2'}`}>
+          <InfoCell label="Start"  value={formatDateTime(auction.startsAt)} />
           <InfoCell label="Koniec" value={formatDateTime(auction.endsAt)} />
-          {auction.type === 'DUTCH' && typeof auction.decrementAmount === 'number' && (
+          {hasDutchData && (
             <>
-              <InfoCell label="Obniżka co" value={`${auction.stepSeconds ?? '?'} s`} />
+              <InfoCell
+                label="Obniżka co"
+                value={`${auction.stepSeconds} s`}
+              />
               <InfoCell
                 label="Kwota obniżki"
                 value={formatMoney(
-                  auction.decrementAmount,
+                  auction.decrementAmount!,
                   auction.decrementCurrency ?? auction.currentPriceCurrency,
                 )}
               />
             </>
           )}
-        </div>
+        </dl>
 
-        {cancelError && <p className="text-sm text-red-400">{cancelError}</p>}
+        {/* Wykres schodkowy (tylko holenderska) */}
+        {hasDutchData && (
+          <PriceChart
+            startsAt={auction.startsAt}
+            endsAt={auction.endsAt}
+            currentPriceAmount={auction.currentPriceAmount}
+            decrementAmount={auction.decrementAmount!}
+            stepSeconds={auction.stepSeconds!}
+            currency={auction.currentPriceCurrency}
+          />
+        )}
+
+        {cancelError && <p className="text-sm text-err">{cancelError}</p>}
 
         {canCancel && (
           <div className="flex justify-end">
-            <Button
-              variant="secondary"
-              buttonSize="sm"
-              onClick={handleCancel}
-              disabled={isCancelling}
-            >
+            <Button variant="secondary" buttonSize="sm" onClick={handleCancel} disabled={isCancelling}>
               {isCancelling ? 'Anulowanie…' : 'Anuluj aukcję'}
             </Button>
           </div>
         )}
+
       </div>
     </div>
   )
 }
 
-// Odliczanie do następnego kroku — wyłącznie wizualne.
-function StepCountdown({ startsAt, stepSeconds }: { startsAt: string; stepSeconds: number }) {
-  const [msToStep, setMsToStep] = useState(() => {
-    const elapsedSec = (Date.now() - new Date(startsAt).getTime()) / 1_000
-    return Math.max(0, (Math.ceil(elapsedSec / stepSeconds) * stepSeconds - elapsedSec) * 1_000)
-  })
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      const elapsedSec = (Date.now() - new Date(startsAt).getTime()) / 1_000
-      setMsToStep(Math.max(0, (Math.ceil(elapsedSec / stepSeconds) * stepSeconds - elapsedSec) * 1_000))
-    }, 500)
-    return () => clearInterval(id)
-  }, [startsAt, stepSeconds])
-
-  const s = Math.ceil(msToStep / 1_000)
-  return (
-    <p className="mt-1 text-xs text-zinc-600">
-      Następna obniżka za: <span className="font-mono">{s} s</span>
-    </p>
-  )
-}
-
-// ── Główna strona ──────────────────────────────────────────────────────────────
+// ── Strona — cztery stany ──────────────────────────────────────────────────────
 export function AuctionDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
   const { data: auction, isPending, isError, error, refetch } = useAuction(id)
@@ -230,16 +330,16 @@ export function AuctionDetailPage() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-3xl">
         <BackLink />
-        <div className="mt-6 rounded-lg border border-red-800/50 bg-red-950/30 p-8 text-center">
-          <p className="font-medium text-red-400">
+        <div className="mt-6 rounded-lg border border-err/20 bg-err-muted p-8 text-center">
+          <p className="font-medium text-err">
             {error instanceof ApiError
               ? `${error.title}${error.detail ? ` — ${error.detail}` : ''}`
-              : 'Błąd ładowania aukcji'}
+              : 'Nie udało się wczytać aukcji.'}
           </p>
           <Button variant="secondary" buttonSize="sm" className="mt-4" onClick={() => void refetch()}>
-            Ponów
+            Spróbuj ponownie
           </Button>
         </div>
       </div>
@@ -248,10 +348,10 @@ export function AuctionDetailPage() {
 
   if (!auction) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-3xl">
         <BackLink />
-        <div className="mt-6 rounded-lg border border-zinc-700 bg-zinc-900 p-12 text-center">
-          <p className="text-zinc-400">Nie znaleziono aukcji.</p>
+        <div className="mt-6 rounded-lg border border-line bg-layer p-12 text-center">
+          <p className="text-ink-2">Nie znaleziono aukcji.</p>
         </div>
       </div>
     )
@@ -262,17 +362,8 @@ export function AuctionDetailPage() {
 
 function BackLink() {
   return (
-    <Link to="/auctions" className="text-sm text-zinc-400 transition-colors hover:text-zinc-100">
+    <Link to="/auctions" className="text-sm text-ink-2 transition-colors hover:text-ink-1">
       ← Wróć do aukcji
     </Link>
-  )
-}
-
-function InfoCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-4">
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="mt-1 text-sm text-zinc-200">{value}</p>
-    </div>
   )
 }
