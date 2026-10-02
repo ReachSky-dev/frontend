@@ -1,0 +1,40 @@
+/*
+ * Tokeny projektu ReachSky — Tailwind v4 (@theme)
+ *
+ * Nazewnictwo:
+ *   canvas / layer / wash — trzy poziomy powierzchni (głębokość ↑)
+ *   line / line-hi        — krawędzie
+ *   ink-1/2/3             — tekst (główny → trzeciorzędny)
+ *   price / price-muted   — bursztyn: TYLKO PriceDisplay i Countdown
+ *   ok / warn / err       — statusy
+ */
+
+@theme {
+  /* ── Powierzchnie (granat, chroma 0.025) ──────────────────── */
+  --color-canvas:       oklch(10% 0.025 265);   /* tło aplikacji      */
+  --color-layer:        oklch(15% 0.025 265);   /* karty, wiersze     */
+  --color-wash:         oklch(22% 0.025 265);   /* elementy interakt. */
+
+  /* ── Krawędzie ────────────────────────────────────────────── */
+  --color-line:         oklch(30% 0.020 265);
+  --color-line-hi:      oklch(42% 0.020 265);
+
+  /* ── Tekst ────────────────────────────────────────────────── */
+  --color-ink-1:        oklch(96% 0.005 265);   /* główny             */
+  --color-ink-2:        oklch(66% 0.010 265);   /* pomocniczy         */
+  --color-ink-3:        oklch(46% 0.010 265);   /* trzeciorzędny      */
+
+  /* ── Cena / odliczanie — WYŁĄCZNIE PriceDisplay i Countdown ─ */
+  --color-price:        oklch(78% 0.14  70);
+  --color-price-muted:  oklch(22% 0.06  70);
+
+  /* ── Statusy ──────────────────────────────────────────────── */
+  --color-ok:           oklch(72% 0.15 155);
+  --color-ok-muted:     oklch(18% 0.06 155);
+
+  --color-warn:         oklch(78% 0.14  70);
+  --color-warn-muted:   oklch(20% 0.06  70);
+
+  --color-err:          oklch(68% 0.18  25);
+  --color-err-muted:    oklch(16% 0.07  25);
+}

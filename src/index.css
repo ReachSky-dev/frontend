@@ -1,5 +1,21 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "./styles/tokens.css";
 
-body {
-  margin: 0;
+/* ── Globalny reset ───────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-ink-1);
+    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }

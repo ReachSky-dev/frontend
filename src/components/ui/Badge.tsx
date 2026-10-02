@@ -1,10 +1,10 @@
 type BadgeVariant = 'default' | 'success' | 'warning' | 'error'
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-zinc-700 text-zinc-300',
-  success: 'bg-emerald-900/60 text-emerald-400',
-  warning: 'bg-amber-900/60 text-amber-400',
-  error:   'bg-red-900/60 text-red-400',
+  default: 'bg-wash    text-ink-2',
+  success: 'bg-ok-muted  text-ok',
+  warning: 'bg-warn-muted text-warn',
+  error:   'bg-err-muted  text-err',
 }
 
 type BadgeProps = {
