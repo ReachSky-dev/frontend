@@ -86,11 +86,9 @@ export function AuctionsPage() {
     {
       key: 'type',
       label: 'Typ',
-      // Wartość z API: "ENGLISH" | "DUTCH". Fallback na wartość surową gdy
-      // backend zwróci nieznany wariant (nie powinno się zdarzyć).
       render: a => (
         <span className="text-ink-2">
-          {auctionTypeLabel[a.type] ?? String(a.type)}
+          {auctionTypeLabel[a.type]}
         </span>
       ),
       className: 'w-32',

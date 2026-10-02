@@ -21,17 +21,17 @@ function toLocalDateTimeInput(d: Date): string {
 
 function validate(v: FormValues): FormErrors {
   const errors: FormErrors = {}
-  if (!v.title.trim()) errors.title = 'Tytuł jest wymagany'
-  if (!v.windowStart) errors.windowStart = 'Data startu jest wymagana'
-  if (!v.windowEnd) errors.windowEnd = 'Data końca jest wymagana'
+  if (!v.title.trim()) errors.title = 'Tytuł jest wymagany.'
+  if (!v.windowStart) errors.windowStart = 'Data startu jest wymagana.'
+  if (!v.windowEnd) errors.windowEnd = 'Data końca jest wymagana.'
   if (v.windowStart && new Date(v.windowStart) <= new Date()) {
-    errors.windowStart = 'Data startu musi być w przyszłości'
+    errors.windowStart = 'Data startu musi być w przyszłości.'
   }
   if (v.windowStart && v.windowEnd && new Date(v.windowEnd) <= new Date(v.windowStart)) {
-    errors.windowEnd = 'Data końca musi być późniejsza niż data startu'
+    errors.windowEnd = 'Data końca musi być późniejsza niż data startu.'
   }
   const cap = parseInt(v.capacity, 10)
-  if (isNaN(cap) || cap < 1) errors.capacity = 'Pojemność musi być >= 1'
+  if (isNaN(cap) || cap < 1) errors.capacity = 'Pojemność musi wynosić co najmniej 1.'
   return errors
 }
 
@@ -72,13 +72,13 @@ export function NewListingPage() {
         capacity: parseInt(values.capacity, 10),
       },
       {
-        onSuccess: (listing) => { navigate(`/listings/${listing.id}`) },
-        onError: (err) => {
-          if (err instanceof ApiError) {
-            setServerError(`${err.title}${err.detail ? ` — ${err.detail}` : ''}`)
-          } else {
-            setServerError('Nieoczekiwany błąd. Spróbuj ponownie.')
-          }
+        onSuccess: listing => { navigate(`/listings/${listing.id}`) },
+        onError: err => {
+          setServerError(
+            err instanceof ApiError
+              ? `${err.title}${err.detail ? ` — ${err.detail}` : ''}`
+              : 'Nieoczekiwany błąd. Spróbuj ponownie.',
+          )
         },
       },
     )
@@ -86,11 +86,12 @@ export function NewListingPage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="mb-6 text-2xl font-semibold text-zinc-100">Nowy listing</h1>
+      {/* "Nowa oferta" — spójnie z resztą UI: "oferta" nie "listing" */}
+      <h1 className="mb-6 text-2xl font-semibold text-ink-1">Nowa oferta</h1>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {serverError && (
-          <div className="rounded-lg border border-red-800/50 bg-red-950/30 p-4 text-sm text-red-400">
+          <div className="rounded-lg border border-err/20 bg-err-muted p-4 text-sm text-err">
             {serverError}
           </div>
         )}
@@ -148,16 +149,12 @@ export function NewListingPage() {
         </Field>
 
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            disabled={isPending}
-          >
-            Anuluj
+          {/* "Wróć" — wraca do poprzedniego widoku, nie anuluje niczego w systemie */}
+          <Button type="button" variant="ghost" onClick={() => navigate(-1)} disabled={isPending}>
+            Wróć
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'Tworzenie…' : 'Utwórz listing'}
+            {isPending ? 'Dodawanie…' : 'Dodaj ofertę'}
           </Button>
         </div>
       </form>
@@ -167,28 +164,20 @@ export function NewListingPage() {
 
 function inputCls(hasError: boolean) {
   return [
-    'w-full rounded border bg-zinc-900 px-3 py-2 text-sm text-zinc-100',
-    'placeholder:text-zinc-600 focus:outline-none focus:ring-1',
+    'w-full rounded border bg-layer px-3 py-2 text-sm text-ink-1',
+    'placeholder:text-ink-3 focus:outline-none focus:ring-1',
     hasError
-      ? 'border-red-600 focus:ring-red-600'
-      : 'border-zinc-700 focus:ring-violet-500',
+      ? 'border-err focus:ring-err'
+      : 'border-line focus:ring-line-hi',
   ].join(' ')
 }
 
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string
-  error?: string
-  children: React.ReactNode
-}) {
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <label className="block text-sm text-zinc-400">{label}</label>
+      <label className="block text-sm text-ink-2">{label}</label>
       {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-err">{error}</p>}
     </div>
   )
 }
