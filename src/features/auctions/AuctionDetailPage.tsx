@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { ApiError } from '../../api/client'
@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { StatusDot } from '../../components/ui/StatusDot'
 import { formatDateTime } from '../../lib/datetime'
 import { formatMoney } from '../../lib/money'
+import { BidPanel } from './BidPanel'
 import { useCancelAuction } from './useCancelAuction'
 import { useAuction } from './useAuction'
 import { useCountdown } from './useCountdown'
@@ -197,6 +198,16 @@ function AuctionDetail({ auction, refetch }: { auction: AuctionDto; refetch: () 
 
   const countdown = useCountdown(auction.endsAt)
 
+  // Antysniping: wykryj przedłużenie aukcji (zmianę endsAt po złożeniu stawki w ostatniej chwili).
+  const prevEndsAtRef = useRef<string | null>(null)
+  const [antisnipedAt, setAntisnipedAt] = useState<string | null>(null)
+  useEffect(() => {
+    if (prevEndsAtRef.current !== null && prevEndsAtRef.current !== auction.endsAt) {
+      setAntisnipedAt(auction.endsAt)
+    }
+    prevEndsAtRef.current = auction.endsAt
+  }, [auction.endsAt])
+
   // Wymuś refetch na granicy kroku cenowego (aukcja holenderska).
   // Cena holenderska jest SCHODKOWA — klient jej nie liczy, backend jest źródłem prawdy.
   useEffect(() => {
@@ -305,6 +316,19 @@ function AuctionDetail({ auction, refetch }: { auction: AuctionDto; refetch: () 
             currency={auction.currentPriceCurrency}
           />
         )}
+
+        {/* Baner antysniping — pojawia się gdy backend przedłuży aukcję */}
+        {antisnipedAt && (
+          <div className="rounded-lg border border-warn/30 bg-warn-muted px-4 py-3 text-sm">
+            <span className="font-medium text-warn">Aukcja przedłużona</span>
+            <span className="ml-2 text-ink-2">
+              — stawka złożona w ostatniej chwili. Nowy koniec: {formatDateTime(antisnipedAt)}
+            </span>
+          </div>
+        )}
+
+        {/* Panel licytacji (angielska) */}
+        <BidPanel auction={auction} />
 
         {cancelError && <p className="text-sm text-err">{cancelError}</p>}
 

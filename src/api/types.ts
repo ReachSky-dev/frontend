@@ -38,6 +38,15 @@ export type UserDto =
   Required<Omit<_User, 'createdAt'>> &
   Pick<_User, 'createdAt'>
 
+// ── Bids ──────────────────────────────────────────────────────────────────────
+
+// BidResponse: wszystkie pola non-null w praktyce (springdoc generuje jako opcjonalne)
+type _Bid = components['schemas']['BidResponse']
+export type BidDto = Required<_Bid>
+
+export type PlaceBidRequest    = components['schemas']['PlaceBidRequest']
+export type SetProxyBidRequest = components['schemas']['SetProxyBidRequest']
+
 // ── Errors ────────────────────────────────────────────────────────────────────
 
 export type ProblemDetail = components['schemas']['ProblemDetail']
