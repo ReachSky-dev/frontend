@@ -22,12 +22,14 @@ function toLocalDateTimeInput(d: Date): string {
 function validate(v: FormValues): FormErrors {
   const errors: FormErrors = {}
   if (!v.title.trim()) errors.title = 'Tytuł jest wymagany.'
-  if (!v.windowStart) errors.windowStart = 'Data startu jest wymagana.'
-  if (!v.windowEnd) errors.windowEnd = 'Data końca jest wymagana.'
-  if (v.windowStart && new Date(v.windowStart) <= new Date()) {
+  if (!v.windowStart) {
+    errors.windowStart = 'Data startu jest wymagana.'
+  } else if (new Date(v.windowStart) <= new Date()) {
     errors.windowStart = 'Data startu musi być w przyszłości.'
   }
-  if (v.windowStart && v.windowEnd && new Date(v.windowEnd) <= new Date(v.windowStart)) {
+  if (!v.windowEnd) {
+    errors.windowEnd = 'Data końca jest wymagana.'
+  } else if (v.windowStart && new Date(v.windowEnd) <= new Date(v.windowStart)) {
     errors.windowEnd = 'Data końca musi być późniejsza niż data startu.'
   }
   const cap = parseInt(v.capacity, 10)
@@ -52,8 +54,23 @@ export function NewListingPage() {
 
   function set(field: keyof FormValues) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setValues(prev => ({ ...prev, [field]: e.target.value }))
-      setErrors(prev => ({ ...prev, [field]: undefined }))
+      const value = e.target.value
+      setValues(prev => {
+        const next = { ...prev, [field]: value }
+        // Gdy zmienia się data "od", zrewaliduj "do" na bieżąco
+        if (field === 'windowStart' && next.windowEnd && next.windowStart) {
+          setErrors(prev => ({
+            ...prev,
+            windowStart: undefined,
+            windowEnd: new Date(next.windowEnd) <= new Date(next.windowStart)
+              ? 'Data końca musi być późniejsza niż data startu.'
+              : undefined,
+          }))
+        } else {
+          setErrors(prev => ({ ...prev, [field]: undefined }))
+        }
+        return next
+      })
     }
   }
 

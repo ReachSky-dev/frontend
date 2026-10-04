@@ -44,6 +44,8 @@ export function ListingDetailPage() {
   const safeId = id ?? ''
   const { data: listing, isPending, isError, error, refetch } = useListing(safeId)
   const auth = useAuth()
+  const { mutate: publish, isPending: isPublishing } = usePublishListing()
+  const [publishError, setPublishError] = useState<string | null>(null)
 
   // Stan: ładowanie
   if (isPending) return <ListingDetailSkeleton />
@@ -78,9 +80,6 @@ export function ListingDetailPage() {
       </div>
     )
   }
-
-  const { mutate: publish, isPending: isPublishing } = usePublishListing()
-  const [publishError, setPublishError] = useState<string | null>(null)
 
   const currentUserId = auth.user?.profile.sub
   const isOwner = listing.sellerId === currentUserId
