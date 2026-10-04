@@ -39,6 +39,21 @@ function AuctionDetailSkeleton() {
   )
 }
 
+// ── Formatowanie czasu w sekundach → czytelna etykieta ────────────────────────
+function formatSeconds(totalSec: number): string {
+  if (totalSec >= 3_600) {
+    const h = Math.floor(totalSec / 3_600)
+    const m = Math.floor((totalSec % 3_600) / 60)
+    return m > 0 ? `${h} godz ${m} min` : `${h} godz`
+  }
+  if (totalSec >= 60) {
+    const m = Math.floor(totalSec / 60)
+    const s = totalSec % 60
+    return s > 0 ? `${m} min ${s} s` : `${m} min`
+  }
+  return `${totalSec} s`
+}
+
 // ── Odliczanie do następnego kroku — wyłącznie wizualne ───────────────────────
 function StepCountdown({ startsAt, stepSeconds }: { startsAt: string; stepSeconds: number }) {
   const [msToStep, setMsToStep] = useState(() => {
@@ -54,19 +69,7 @@ function StepCountdown({ startsAt, stepSeconds }: { startsAt: string; stepSecond
     return () => clearInterval(id)
   }, [startsAt, stepSeconds])
 
-  const totalSec = Math.ceil(msToStep / 1_000)
-  let timeLabel: string
-  if (totalSec >= 3_600) {
-    const h = Math.floor(totalSec / 3_600)
-    const m = Math.floor((totalSec % 3_600) / 60)
-    timeLabel = m > 0 ? `${h} godz ${m} min` : `${h} godz`
-  } else if (totalSec >= 60) {
-    const m = Math.floor(totalSec / 60)
-    const s = totalSec % 60
-    timeLabel = s > 0 ? `${m} min ${s} s` : `${m} min`
-  } else {
-    timeLabel = `${totalSec} s`
-  }
+  const timeLabel = formatSeconds(Math.ceil(msToStep / 1_000))
 
   return (
     <div className="text-center">
@@ -320,7 +323,7 @@ function AuctionDetail({ auction, refetch }: { auction: AuctionDto; refetch: () 
             <>
               <InfoCell
                 label="Obniżka co"
-                value={`${auction.stepSeconds} s`}
+                value={formatSeconds(auction.stepSeconds!)}
               />
               <InfoCell
                 label="Kwota obniżki"
