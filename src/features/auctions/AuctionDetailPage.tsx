@@ -54,11 +54,24 @@ function StepCountdown({ startsAt, stepSeconds }: { startsAt: string; stepSecond
     return () => clearInterval(id)
   }, [startsAt, stepSeconds])
 
-  const s = Math.ceil(msToStep / 1_000)
+  const totalSec = Math.ceil(msToStep / 1_000)
+  let timeLabel: string
+  if (totalSec >= 3_600) {
+    const h = Math.floor(totalSec / 3_600)
+    const m = Math.floor((totalSec % 3_600) / 60)
+    timeLabel = m > 0 ? `${h} godz ${m} min` : `${h} godz`
+  } else if (totalSec >= 60) {
+    const m = Math.floor(totalSec / 60)
+    const s = totalSec % 60
+    timeLabel = s > 0 ? `${m} min ${s} s` : `${m} min`
+  } else {
+    timeLabel = `${totalSec} s`
+  }
+
   return (
     <div className="text-center">
       <p className="text-xs text-ink-3">Następna obniżka za</p>
-      <p className="tabular-nums text-xl font-medium text-ink-2">{s} s</p>
+      <p className="tabular-nums text-xl font-medium text-ink-2">{timeLabel}</p>
     </div>
   )
 }
@@ -81,24 +94,26 @@ function PriceChart({
   stepSeconds: number
   currency: string
 }) {
-  const startMs  = new Date(startsAt).getTime()
-  const endMs    = new Date(endsAt).getTime()
-  const totalMs  = endMs - startMs
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [tooltip, setTooltip] = useState<{ clientX: number; svgX: number; price: number } | null>(null)
+
+  const startMs = new Date(startsAt).getTime()
+  const endMs   = new Date(endsAt).getTime()
+  const totalMs = endMs - startMs
   if (totalMs <= 0) return null
 
-  const nowMs = Math.min(Date.now(), endMs)
+  const nowMs  = Math.min(Date.now(), endMs)
+  const stepMs = stepSeconds * 1_000
 
   // Odtwórz cenę startową z aktualnej ceny i liczby minionych kroków
-  const elapsedSec    = Math.max(0, (nowMs - startMs) / 1_000)
-  const stepsDone     = Math.floor(elapsedSec / stepSeconds)
-  const initialPrice  = currentPriceAmount + stepsDone * decrementAmount
+  const elapsedSec   = Math.max(0, (nowMs - startMs) / 1_000)
+  const stepsDone    = Math.floor(elapsedSec / stepSeconds)
+  const initialPrice = currentPriceAmount + stepsDone * decrementAmount
 
   // Wygeneruj wszystkie kroki [ { ms, price } ]
   type Step = { ms: number; price: number }
   const steps: Step[] = []
-  const stepMs = stepSeconds * 1_000
-  let t = startMs
-  let p = initialPrice
+  let t = startMs, p = initialPrice
   while (t < endMs) {
     steps.push({ ms: t, price: p })
     t += stepMs
@@ -106,75 +121,88 @@ function PriceChart({
   }
   steps.push({ ms: endMs, price: steps[steps.length - 1].price })
 
-  const prices  = steps.map(s => s.price)
-  const maxP    = Math.max(...prices)
-  const minP    = Math.min(...prices)
-  const pRange  = maxP - minP || 1
+  const prices = steps.map(s => s.price)
+  const maxP   = Math.max(...prices)
+  const minP   = Math.min(...prices)
+  const pRange = maxP - minP || 1
 
-  // SVG viewport
-  const W  = 600
-  const H  = 80
-  const pL = 4; const pR = 4; const pT = 6; const pB = 6
+  // SVG viewport — pT/pB 16 px żeby etykiety tekstowe nie wychodziły poza viewBox
+  const W = 600, H = 100
+  const pL = 4, pR = 4, pT = 16, pB = 16
   const cW = W - pL - pR
   const cH = H - pT - pB
 
-  function toX(ms: number)  { return pL + ((ms - startMs) / totalMs) * cW }
-  function toY(price: number) { return pT + cH - ((price - minP) / pRange) * cH }
+  const toX = (ms: number)    => pL + ((ms - startMs) / totalMs) * cW
+  const toY = (price: number) => pT + cH - ((price - minP) / pRange) * cH
 
-  // Zbuduj punkty polyline — funkcja schodkowa (bez wygładzania)
+  // Punkty polyline — funkcja schodkowa (bez wygładzania)
   const pts: string[] = []
   for (let i = 0; i < steps.length - 1; i++) {
-    const curr = steps[i]
-    const next = steps[i + 1]
+    const curr = steps[i], next = steps[i + 1]
     if (i === 0) pts.push(`${toX(curr.ms).toFixed(1)},${toY(curr.price).toFixed(1)}`)
-    // Poziomy odcinek do czasu następnego kroku (cena stała)
     pts.push(`${toX(next.ms).toFixed(1)},${toY(curr.price).toFixed(1)}`)
-    // Pionowy spadek do nowej ceny
     pts.push(`${toX(next.ms).toFixed(1)},${toY(next.price).toFixed(1)}`)
   }
 
   const nowX = toX(nowMs)
 
+  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    if (!svgRef.current) return
+    const rect = svgRef.current.getBoundingClientRect()
+    const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    const ms   = startMs + relX * totalMs
+    const idx  = Math.max(0, Math.min(Math.floor((ms - startMs) / stepMs), steps.length - 2))
+    setTooltip({ clientX: e.clientX - rect.left, svgX: pL + relX * cW, price: steps[idx].price })
+  }
+
   return (
     <div>
       <p className="mb-2 text-xs text-ink-3">Historia ceny</p>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        className="w-full"
-        style={{ height: '80px' }}
-        aria-label="Wykres schodkowy ceny aukcji holenderskiej"
-      >
-        {/* Linia schodkowa */}
-        <polyline
-          points={pts.join(' ')}
-          fill="none"
-          stroke="var(--color-line-hi)"
-          strokeWidth="1.5"
-          strokeLinejoin="miter"
-        />
-        {/* Marker bieżącego czasu */}
-        <line
-          x1={nowX} y1={pT}
-          x2={nowX} y2={pT + cH}
-          stroke="var(--color-price)"
-          strokeWidth="1"
-          strokeDasharray="3,2"
-        />
-        {/* Etykiety cen (min / max) */}
-        <text
-          x={pL} y={toY(maxP) - 2}
-          fontSize="8" fill="var(--color-ink-3)" dominantBaseline="auto"
+      <div className="relative" onMouseLeave={() => setTooltip(null)}>
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="w-full"
+          style={{ height: '100px' }}
+          onMouseMove={handleMouseMove}
+          aria-label="Wykres schodkowy ceny aukcji holenderskiej"
         >
-          {formatMoney(maxP, currency)}
-        </text>
-        <text
-          x={pL} y={toY(minP) + 10}
-          fontSize="8" fill="var(--color-ink-3)"
-        >
-          {formatMoney(minP, currency)}
-        </text>
-      </svg>
+          {/* Linia schodkowa */}
+          <polyline
+            points={pts.join(' ')}
+            fill="none"
+            stroke="var(--color-line-hi)"
+            strokeWidth="1.5"
+            strokeLinejoin="miter"
+          />
+          {/* Marker bieżącego czasu */}
+          <line x1={nowX} y1={pT} x2={nowX} y2={pT + cH}
+            stroke="var(--color-price)" strokeWidth="1" strokeDasharray="3,2" />
+          {/* Marker kursora */}
+          {tooltip && (
+            <line x1={tooltip.svgX} y1={pT} x2={tooltip.svgX} y2={pT + cH}
+              stroke="var(--color-ink-2)" strokeWidth="1" strokeDasharray="2,2" />
+          )}
+          {/* Etykiety cen — wewnątrz viewBox dzięki pT/pB=16 */}
+          <text x={pL} y={pT - 2} fontSize="8" fill="var(--color-ink-3)" dominantBaseline="auto">
+            {formatMoney(maxP, currency)}
+          </text>
+          <text x={pL} y={pT + cH + 12} fontSize="8" fill="var(--color-ink-3)" dominantBaseline="auto">
+            {formatMoney(minP, currency)}
+          </text>
+        </svg>
+
+        {/* Tooltip HTML — nie skaluje się z SVG, dokładna pozycja */}
+        {tooltip && (
+          <div
+            className="pointer-events-none absolute bottom-full mb-1 -translate-x-1/2 whitespace-nowrap rounded border border-line bg-layer px-2 py-1 text-xs text-ink-1 shadow-sm"
+            style={{ left: tooltip.clientX }}
+          >
+            {formatMoney(tooltip.price, currency)}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
