@@ -10,6 +10,13 @@
     box-sizing: border-box;
   }
 
+  /* color-scheme: dark — przeglądarka renderuje natywne kontrolki
+     (ikony datetime, scrollbary, date picker popup) w trybie ciemnym.
+     Bez tego ikona kalendarza jest ciemna na ciemnym tle → niewidoczna. */
+  :root {
+    color-scheme: dark;
+  }
+
   body {
     margin: 0;
     background-color: var(--color-canvas);
