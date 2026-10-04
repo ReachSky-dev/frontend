@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import type { AuctionType, CreateAuctionRequest } from '../../api/types'
 import { Button } from '../../components/ui/Button'
-import { formatDateTime } from '../../lib/datetime'
 import { formatMoney } from '../../lib/money'
 import { useCreateAuction } from './useCreateAuction'
 import { auctionTypeLabel } from './auctionMeta'
@@ -50,15 +49,31 @@ function validate(v: FormValues): FormErrors {
   if (isNaN(rp) || rp <= 0)  errors.reservePrice  = 'Musi być > 0.'
   if (v.type === 'DUTCH') {
     const da = parseFloat(v.decrementAmount)
-    if (isNaN(da) || da <= 0)  errors.decrementAmount = 'Musi być > 0.'
+    if (isNaN(da) || da <= 0) errors.decrementAmount = 'Musi być > 0.'
     const ss = parseInt(v.stepSeconds, 10)
-    if (isNaN(ss) || ss <= 0)  errors.stepSeconds    = 'Musi być > 0.'
+    if (isNaN(ss) || ss <= 0) errors.stepSeconds = 'Musi być > 0.'
+    if (v.floorAmount) {
+      const fl = parseFloat(v.floorAmount)
+      if (!isNaN(fl) && !isNaN(sp) && fl >= sp)
+        errors.floorAmount = 'Cena minimalna musi być niższa niż cena startowa.'
+    }
   }
   return errors
 }
 
 // Podgląd spadku ceny aukcji holenderskiej — kilka kluczowych punktów.
 // WYŁĄCZNIE wizualizacja — rzeczywistą cenę wyznacza backend.
+function fmtPreviewTime(iso: string, stepSeconds: number): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(stepSeconds < 60 ? { second: '2-digit' } : {}),
+    timeZoneName: 'short',
+  }).format(new Date(iso))
+}
+
 function DutchPreview({
   startPrice, decrement, stepSeconds, floor, startsAt, endsAt, currency,
 }: {
@@ -72,6 +87,8 @@ function DutchPreview({
 }) {
   if (!startPrice || !decrement || !stepSeconds || !startsAt || !endsAt) return null
   if (new Date(endsAt) <= new Date(startsAt)) return null
+  // Nie pokazuj podglądu gdy cena minimalna >= startowej — dane są niepoprawne
+  if (floor > 0 && floor >= startPrice) return null
 
   const start    = new Date(startsAt)
   const end      = new Date(endsAt)
@@ -84,12 +101,12 @@ function DutchPreview({
   for (let i = 0; i <= show; i++) {
     const t = new Date(start.getTime() + i * stepMs)
     const price = Math.max(startPrice - i * decrement, floor)
-    points.push({ time: formatDateTime(t.toISOString()), price })
+    points.push({ time: fmtPreviewTime(t.toISOString(), stepSeconds), price })
   }
   if (maxSteps > show) {
     const steps = Math.floor(totalMs / stepMs)
     points.push({
-      time: formatDateTime(end.toISOString()),
+      time: fmtPreviewTime(end.toISOString(), stepSeconds),
       price: Math.max(startPrice - steps * decrement, floor),
     })
   }
