@@ -27,7 +27,8 @@ function ListingsSkeleton() {
 
 export function ListingsPage() {
   const { data, isPending, isError, error, refetch } = useListings()
-  const listings = data ?? []
+  const now = Date.now()
+  const listings = (data ?? []).filter(l => new Date(l.windowEnd).getTime() > now)
 
   return (
     <div>
