@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { ApiError } from '../../api/client'
@@ -6,6 +7,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { StatusDot } from '../../components/ui/StatusDot'
 import { formatDateTime } from '../../lib/datetime'
 import { useListing } from './useListing'
+import { usePublishListing } from './usePublishListing'
 import { listingStatusLabel, listingStatusShape } from './listingMeta'
 
 function ListingDetailSkeleton() {
@@ -77,8 +79,13 @@ export function ListingDetailPage() {
     )
   }
 
+  const { mutate: publish, isPending: isPublishing } = usePublishListing()
+  const [publishError, setPublishError] = useState<string | null>(null)
+
   const currentUserId = auth.user?.profile.sub
-  const canCreateAuction = listing.sellerId === currentUserId && listing.status === 'ACTIVE'
+  const isOwner = listing.sellerId === currentUserId
+  const canPublish       = isOwner && listing.status === 'DRAFT'
+  const canCreateAuction = isOwner && listing.status === 'ACTIVE'
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -103,11 +110,30 @@ export function ListingDetailPage() {
           <InfoCell label="Liczba dostępnych miejsc" value={String(listing.capacity)} />
         </dl>
 
-        {canCreateAuction && (
+        {publishError && <p className="text-sm text-err">{publishError}</p>}
+
+        {(canPublish || canCreateAuction) && (
           <div className="flex justify-end">
-            <Link to={`/listings/${listing.id}/auctions/new`}>
-              <Button>Utwórz aukcję</Button>
-            </Link>
+            {canPublish && (
+              <Button
+                disabled={isPublishing}
+                onClick={() => {
+                  setPublishError(null)
+                  publish(listing.id, {
+                    onError: err => setPublishError(
+                      err instanceof ApiError ? err.title : 'Nie udało się opublikować oferty.'
+                    ),
+                  })
+                }}
+              >
+                {isPublishing ? 'Publikowanie…' : 'Opublikuj ofertę'}
+              </Button>
+            )}
+            {canCreateAuction && (
+              <Link to={`/listings/${listing.id}/auctions/new`}>
+                <Button>Utwórz aukcję</Button>
+              </Link>
+            )}
           </div>
         )}
       </div>
