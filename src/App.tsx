@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './app/AppLayout'
 import { NotFoundPage } from './app/NotFoundPage'
 import { CallbackPage } from './features/auth/CallbackPage'
+import { LoggedOutPage } from './features/auth/LoggedOutPage'
 import { RequireRole } from './features/auth/RequireRole'
 import { AuctionDetailPage } from './features/auctions/AuctionDetailPage'
 import { AuctionsPage } from './features/auctions/AuctionsPage'
@@ -16,6 +17,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="callback" element={<CallbackPage />} />
+        <Route path="logged-out" element={<LoggedOutPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<ListingsPage />} />
           <Route path="listings/:id" element={<ListingDetailPage />} />

@@ -7,5 +7,6 @@ export function useAuctions() {
   return useQuery({
     queryKey: ['auctions'],
     queryFn: () => fetchWithAuth<AuctionDto[]>('/auctions'),
+    refetchInterval: 5_000,
   })
 }
