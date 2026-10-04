@@ -10,7 +10,7 @@ function UserMenu() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-zinc-300">{displayName}</span>
+      <span className="text-sm text-ink-1">{displayName}</span>
       <Button
         variant="ghost"
         buttonSize="sm"
