@@ -135,7 +135,10 @@ function ListingsTab({ sellerId }: { sellerId: string }) {
         }
         if (l.status === 'ACTIVE') {
           return (
-            <Link to={`/listings/${l.id}/auctions/new`}>
+            <Link
+              to={`/listings/${l.id}/auctions/new`}
+              onClick={e => e.stopPropagation()}
+            >
               <Button variant="primary" buttonSize="sm">Utwórz aukcję</Button>
             </Link>
           )

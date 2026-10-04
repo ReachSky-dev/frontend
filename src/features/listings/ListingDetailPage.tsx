@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { useAuth } from 'react-oidc-context'
 import { ApiError } from '../../api/client'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -40,6 +41,7 @@ export function ListingDetailPage() {
   const { id } = useParams<{ id: string }>()
   const safeId = id ?? ''
   const { data: listing, isPending, isError, error, refetch } = useListing(safeId)
+  const auth = useAuth()
 
   // Stan: ładowanie
   if (isPending) return <ListingDetailSkeleton />
@@ -75,7 +77,9 @@ export function ListingDetailPage() {
     )
   }
 
-  // Stan: dane
+  const currentUserId = auth.user?.profile.sub
+  const canCreateAuction = listing.sellerId === currentUserId && listing.status === 'ACTIVE'
+
   return (
     <div className="mx-auto max-w-2xl">
       <BackLink />
@@ -98,6 +102,14 @@ export function ListingDetailPage() {
           <InfoCell label="Dostępne do"             value={formatDateTime(listing.windowEnd)} />
           <InfoCell label="Liczba dostępnych miejsc" value={String(listing.capacity)} />
         </dl>
+
+        {canCreateAuction && (
+          <div className="flex justify-end">
+            <Link to={`/listings/${listing.id}/auctions/new`}>
+              <Button>Utwórz aukcję</Button>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )
