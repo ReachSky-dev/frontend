@@ -8,6 +8,7 @@ import { StatusDot } from '../../components/ui/StatusDot'
 import { formatDateTime } from '../../lib/datetime'
 import { useListing } from './useListing'
 import { usePublishListing } from './usePublishListing'
+import { useRenewListing } from './useRenewListing'
 import { listingStatusLabel, listingStatusShape } from './listingMeta'
 
 function ListingDetailSkeleton() {
@@ -45,6 +46,7 @@ export function ListingDetailPage() {
   const { data: listing, isPending, isError, error, refetch } = useListing(safeId)
   const auth = useAuth()
   const { mutate: publish, isPending: isPublishing } = usePublishListing()
+  const { mutate: renew, isPending: isRenewing } = useRenewListing()
   const [publishError, setPublishError] = useState<string | null>(null)
 
   // Stan: ładowanie
@@ -85,6 +87,7 @@ export function ListingDetailPage() {
   const isOwner = listing.sellerId === currentUserId
   const canPublish       = isOwner && listing.status === 'DRAFT'
   const canCreateAuction = isOwner && listing.status === 'ACTIVE'
+  const canRenew         = isOwner && listing.status === 'CLOSED'
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -111,7 +114,7 @@ export function ListingDetailPage() {
 
         {publishError && <p className="text-sm text-err">{publishError}</p>}
 
-        {(canPublish || canCreateAuction) && (
+        {(canPublish || canCreateAuction || canRenew) && (
           <div className="flex justify-end">
             {canPublish && (
               <Button
@@ -132,6 +135,14 @@ export function ListingDetailPage() {
               <Link to={`/listings/${listing.id}/auctions/new`}>
                 <Button>Utwórz aukcję</Button>
               </Link>
+            )}
+            {canRenew && (
+              <Button
+                disabled={isRenewing}
+                onClick={() => renew(listing.id)}
+              >
+                {isRenewing ? 'Odnawianie…' : 'Odnów ofertę'}
+              </Button>
             )}
           </div>
         )}

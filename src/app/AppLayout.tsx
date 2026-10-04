@@ -38,6 +38,9 @@ export function AppLayout() {
             <NavLink to="/auctions" className={navClass}>
               Aukcje
             </NavLink>
+            <NavLink to="/history" className={navClass}>
+              Historia
+            </NavLink>
             {isSeller && (
               <NavLink to="/seller" className={navClass}>
                 Panel sprzedawcy
