@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { Button } from '../../components/ui/Button'
 import { useCreateListing } from './useCreateListing'
+import { usePublishListing } from './usePublishListing'
 
 type FormValues = {
   title: string
@@ -39,7 +40,9 @@ function validate(v: FormValues): FormErrors {
 
 export function NewListingPage() {
   const navigate = useNavigate()
-  const { mutate, isPending } = useCreateListing()
+  const { mutate: createListing, isPending: isCreating } = useCreateListing()
+  const { mutate: publishListing, isPending: isPublishing } = usePublishListing()
+  const isPending = isCreating || isPublishing
   const minNow = toLocalDateTimeInput(new Date())
 
   const [values, setValues] = useState<FormValues>({
@@ -80,7 +83,7 @@ export function NewListingPage() {
     const errs = validate(values)
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
-    mutate(
+    createListing(
       {
         title: values.title.trim(),
         description: values.description.trim() || undefined,
@@ -89,7 +92,21 @@ export function NewListingPage() {
         capacity: parseInt(values.capacity, 10),
       },
       {
-        onSuccess: listing => { navigate(`/listings/${listing.id}`) },
+        onSuccess: listing => {
+          // Auto-publikuj i przejdź od razu do formularza aukcji
+          publishListing(listing.id, {
+            onSuccess: () => navigate(`/listings/${listing.id}/auctions/new`),
+            onError: err => {
+              // Publikacja nie powiodła się — wróć do szczegółów oferty
+              setServerError(
+                err instanceof ApiError
+                  ? `Oferta została stworzona, ale nie udało się jej opublikować: ${err.title}`
+                  : 'Oferta stworzona, ale nie udało się jej opublikować.',
+              )
+              navigate(`/listings/${listing.id}`)
+            },
+          })
+        },
         onError: err => {
           setServerError(
             err instanceof ApiError
@@ -171,7 +188,7 @@ export function NewListingPage() {
             Wróć
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'Dodawanie…' : 'Dodaj ofertę'}
+            {isCreating ? 'Tworzenie…' : isPublishing ? 'Publikowanie…' : 'Dodaj ofertę'}
           </Button>
         </div>
       </form>
