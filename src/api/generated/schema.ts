@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/orders/{id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pay for an order */
+        post: operations["pay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/listings": {
         parameters: {
             query?: never;
@@ -16,6 +33,23 @@ export interface paths {
         put?: never;
         /** Create a new listing */
         post: operations["createListing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/listings/{id}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-activate a CLOSED listing */
+        post: operations["renewListing"];
         delete?: never;
         options?: never;
         head?: never;
@@ -74,6 +108,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auctions/{auctionId}/bids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all bids for an auction, ordered by sequence ascending */
+        get: operations["listBids"];
+        put?: never;
+        /** Place a bid on an English auction */
+        post: operations["placeBid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auctions/{auctionId}/bids/proxy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set or update a proxy (automatic) bid */
+        post: operations["setProxy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List orders for the current buyer */
+        get: operations["myOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get order by ID */
+        get: operations["getById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -91,6 +194,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/listings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get listing by ID */
+        get: operations["getById_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auctions/{id}": {
         parameters: {
             query?: never;
@@ -99,7 +219,58 @@ export interface paths {
             cookie?: never;
         };
         /** Get auction by ID */
-        get: operations["getById"];
+        get: operations["getById_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auctions/won": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List auctions won by the current user */
+        get: operations["listWon"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auctions/my": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all auctions created by the current seller (all statuses) */
+        get: operations["listMy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auctions/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all ended auctions (SOLD, RESERVE_NOT_MET, CANCELLED, SETTLED) */
+        get: operations["listHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -112,6 +283,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        OrderResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            auctionId?: string;
+            /** Format: uuid */
+            buyerId?: string;
+            /** Format: int64 */
+            amountInMinorUnits?: number;
+            currency?: string;
+            /** @enum {string} */
+            status?: "PENDING_PAYMENT" | "PAID" | "CONFIRMED" | "EXPIRED" | "CANCELLED";
+            /** Format: date-time */
+            paymentDeadline?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
         CreateListingRequest: {
             title: string;
             description?: string;
@@ -207,6 +395,31 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        PlaceBidRequest: {
+            /** Format: int64 */
+            amountInMinorUnits?: number;
+            currency: string;
+        };
+        BidResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            auctionId?: string;
+            /** Format: uuid */
+            bidderId?: string;
+            /** Format: int64 */
+            amountInMinorUnits?: number;
+            currency?: string;
+            /** Format: int64 */
+            sequence?: number;
+            /** Format: date-time */
+            placedAt?: string;
+        };
+        SetProxyBidRequest: {
+            /** Format: int64 */
+            maxAmountInMinorUnits?: number;
+            currency: string;
+        };
         UserProfileResponse: {
             /** Format: uuid */
             id?: string;
@@ -238,6 +451,37 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    pay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderResponse"];
+                };
+            };
+            /** @description Order not in PENDING_PAYMENT state or deadline passed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderResponse"];
+                };
+            };
+        };
+    };
     listActive: {
         parameters: {
             query?: never;
@@ -291,6 +535,55 @@ export interface operations {
             };
             /** @description SELLER role required */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ListingResponse"];
+                };
+            };
+        };
+    };
+    renewListing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ListingResponse"];
+                };
+            };
+            /** @description SELLER role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ListingResponse"];
+                };
+            };
+            /** @description Listing not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ListingResponse"];
+                };
+            };
+            /** @description Listing is not in CLOSED state */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -442,6 +735,140 @@ export interface operations {
             };
         };
     };
+    listBids: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BidResponse"][];
+                };
+            };
+        };
+    };
+    placeBid: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceBidRequest"];
+            };
+        };
+        responses: {
+            /** @description Duplicate idempotency key — returns existing bid */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BidResponse"];
+                };
+            };
+            /** @description Bid rejected — too low or auction not running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BidResponse"];
+                };
+            };
+        };
+    };
+    setProxy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetProxyBidRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    myOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderResponse"][];
+                };
+            };
+        };
+    };
+    getById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrderResponse"];
+                };
+            };
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -462,7 +889,29 @@ export interface operations {
             };
         };
     };
-    getById: {
+    getById_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listing not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ListingResponse"];
+                };
+            };
+        };
+    };
+    getById_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -480,6 +929,66 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AuctionResponse"];
+                };
+            };
+        };
+    };
+    listWon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"][];
+                };
+            };
+        };
+    };
+    listMy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"][];
+                };
+            };
+        };
+    };
+    listHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuctionResponse"][];
                 };
             };
         };
