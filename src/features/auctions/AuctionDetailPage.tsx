@@ -98,7 +98,7 @@ function PriceChart({
   currency: string
 }) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const [tooltip, setTooltip] = useState<{ clientX: number; svgX: number; price: number } | null>(null)
+  const [tooltip, setTooltip] = useState<{ clientX: number; svgX: number; price: number; ms: number } | null>(null)
 
   const startMs = new Date(startsAt).getTime()
   const endMs   = new Date(endsAt).getTime()
@@ -155,7 +155,23 @@ function PriceChart({
     const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
     const ms   = startMs + relX * totalMs
     const idx  = Math.max(0, Math.min(Math.floor((ms - startMs) / stepMs), steps.length - 2))
-    setTooltip({ clientX: e.clientX - rect.left, svgX: pL + relX * cW, price: steps[idx].price })
+    setTooltip({ clientX: e.clientX - rect.left, svgX: pL + relX * cW, price: steps[idx].price, ms })
+  }
+
+  // Oś czasu — 5 równomiernych ticków
+  const TICK_COUNT = 5
+  const multiDay   = totalMs > 24 * 3_600_000
+  const ticks      = Array.from({ length: TICK_COUNT }, (_, i) => {
+    const rel = i / (TICK_COUNT - 1)
+    return { ms: startMs + rel * totalMs, rel }
+  })
+
+  function fmtAxisTime(ms: number): string {
+    const d    = new Date(ms)
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    if (!multiDay) return time
+    const date = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+    return `${date} ${time}`
   }
 
   return (
@@ -187,24 +203,48 @@ function PriceChart({
             <line x1={tooltip.svgX} y1={pT} x2={tooltip.svgX} y2={pT + cH}
               stroke="var(--color-ink-2)" strokeWidth="1" strokeDasharray="2,2" />
           )}
-          {/* Etykiety cen — wewnątrz viewBox dzięki pT/pB=16 */}
+          {/* Etykiety cen */}
           <text x={pL} y={pT - 2} fontSize="8" fill="var(--color-ink-3)" dominantBaseline="auto">
             {formatMoney(maxP, currency)}
           </text>
           <text x={pL} y={pT + cH + 12} fontSize="8" fill="var(--color-ink-3)" dominantBaseline="auto">
             {formatMoney(minP, currency)}
           </text>
+          {/* Kreseczki osi czasu */}
+          {ticks.map(tick => (
+            <line key={tick.ms}
+              x1={toX(tick.ms)} y1={pT + cH}
+              x2={toX(tick.ms)} y2={pT + cH + 5}
+              stroke="var(--color-ink-3)" strokeWidth="0.5" />
+          ))}
         </svg>
 
-        {/* Tooltip HTML — nie skaluje się z SVG, dokładna pozycja */}
+        {/* Tooltip HTML */}
         {tooltip && (
           <div
             className="pointer-events-none absolute bottom-full mb-1 -translate-x-1/2 whitespace-nowrap rounded border border-line bg-layer px-2 py-1 text-xs text-ink-1 shadow-sm"
             style={{ left: tooltip.clientX }}
           >
-            {formatMoney(tooltip.price, currency)}
+            <span className="font-medium tabular-nums">{formatMoney(tooltip.price, currency)}</span>
+            <span className="ml-2 text-ink-3">{fmtAxisTime(tooltip.ms)}</span>
           </div>
         )}
+      </div>
+
+      {/* Oś czasu — labele HTML (nie rozciągają się z SVG) */}
+      <div className="relative mt-0.5 h-4">
+        {ticks.map((tick, i) => (
+          <span
+            key={tick.ms}
+            className={[
+              'absolute text-[10px] tabular-nums text-ink-3',
+              i === 0 ? '' : i === TICK_COUNT - 1 ? '-translate-x-full' : '-translate-x-1/2',
+            ].join(' ')}
+            style={{ left: `${tick.rel * 100}%` }}
+          >
+            {fmtAxisTime(tick.ms)}
+          </span>
+        ))}
       </div>
     </div>
   )
