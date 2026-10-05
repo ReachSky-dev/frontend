@@ -39,6 +39,38 @@ Kolejnosc zmian kontraktu:
 
 ---
 
+## Obraz Docker
+
+Obraz publikowany na Docker Hub przy każdym push na `main`.
+
+```
+<DOCKERHUB_USERNAME>/reachsky-frontend:<sha>   # konkretna rewizja
+<DOCKERHUB_USERNAME>/reachsky-frontend:latest  # ostatni build z main
+```
+
+### Uruchomienie konkretnej wersji
+
+```bash
+docker run -p 8080:8080 \
+  -e API_URL=http://backend:8080 \
+  -e OIDC_AUTHORITY=http://keycloak:8180/realms/reachsky \
+  -e OIDC_CLIENT_ID=reachsky-frontend \
+  <DOCKERHUB_USERNAME>/reachsky-frontend:<sha>
+```
+
+### Zmienne środowiskowe
+
+| Zmienna | Opis | Przykład |
+|---|---|---|
+| `API_URL` | Adres bazowy backendu (bez `/api`) | `http://backend:8080` |
+| `OIDC_AUTHORITY` | URL realm Keycloak | `https://auth.example.com/realms/reachsky` |
+| `OIDC_CLIENT_ID` | ID klienta OIDC | `reachsky-frontend` |
+
+Zmienne są wstrzykiwane przez entrypoint do `window.__RUNTIME_CONFIG__` —
+kontener nie wymaga przebudowy przy zmianie konfiguracji.
+
+---
+
 ## Stack
 
 - React 18 + TypeScript (tryb `strict`)
