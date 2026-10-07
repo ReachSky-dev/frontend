@@ -8,9 +8,10 @@ export function CallbackPage() {
 
   useEffect(() => {
     if (!auth.isLoading && !auth.error && auth.isAuthenticated) {
-      navigate('/', { replace: true })
+      const state = auth.user?.state as { returnTo?: string } | undefined
+      navigate(state?.returnTo ?? '/', { replace: true })
     }
-  }, [auth.isLoading, auth.error, auth.isAuthenticated, navigate])
+  }, [auth.isLoading, auth.error, auth.isAuthenticated, auth.user, navigate])
 
   if (auth.error) {
     return (

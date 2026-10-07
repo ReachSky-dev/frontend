@@ -225,7 +225,7 @@ function LoginCta() {
     <div className="rounded-lg border border-line bg-layer p-6 text-center">
       <p className="text-sm text-ink-2">Zaloguj się, żeby złożyć stawkę.</p>
       <button
-        onClick={() => void auth.signinRedirect()}
+        onClick={() => void auth.signinRedirect({ state: { returnTo: window.location.pathname } })}
         className="mt-3 inline-block text-sm text-ink-1 underline underline-offset-2 hover:text-ink-2"
       >
         Przejdź do logowania

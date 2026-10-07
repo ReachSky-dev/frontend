@@ -32,7 +32,7 @@ export function AuthControl() {
       <Button
         variant="secondary"
         buttonSize="sm"
-        onClick={() => void auth.signinRedirect()}
+        onClick={() => void auth.signinRedirect({ state: { returnTo: window.location.pathname } })}
       >
         Zaloguj się
       </Button>
