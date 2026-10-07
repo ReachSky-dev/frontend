@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { ApiError } from '../../api/client'
 import type { AuctionDto, BidDto } from '../../api/types'
@@ -221,15 +220,16 @@ function BidHistory({ auctionId, currentUserId }: { auctionId: string; currentUs
 
 // ── CTA dla niezalogowanych ───────────────────────────────────────────────────
 function LoginCta() {
+  const auth = useAuth()
   return (
     <div className="rounded-lg border border-line bg-layer p-6 text-center">
       <p className="text-sm text-ink-2">Zaloguj się, żeby złożyć stawkę.</p>
-      <Link
-        to="/login"
+      <button
+        onClick={() => void auth.signinRedirect()}
         className="mt-3 inline-block text-sm text-ink-1 underline underline-offset-2 hover:text-ink-2"
       >
         Przejdź do logowania
-      </Link>
+      </button>
     </div>
   )
 }
