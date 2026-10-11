@@ -15,13 +15,13 @@ export function CallbackPage() {
 
   if (auth.error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
         <div className="text-center">
-          <p className="text-lg font-medium text-red-400">Błąd logowania</p>
-          <p className="mt-2 text-sm text-zinc-500">{auth.error.message}</p>
+          <p className="text-lg font-medium text-err">Błąd logowania</p>
+          <p className="mt-2 text-sm text-ink-3">{auth.error.message}</p>
           <Link
             to="/"
-            className="mt-6 inline-block text-sm text-violet-400 transition-colors hover:text-violet-300"
+            className="mt-6 inline-block text-sm text-primary transition-colors hover:text-ink-1"
           >
             ← Wróć na stronę główną
           </Link>
@@ -31,8 +31,8 @@ export function CallbackPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950">
-      <p className="text-zinc-400">Logowanie…</p>
+    <div className="flex min-h-screen items-center justify-center bg-canvas">
+      <p className="text-ink-2">Logowanie…</p>
     </div>
   )
 }
