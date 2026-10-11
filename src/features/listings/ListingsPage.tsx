@@ -1,13 +1,83 @@
 import { Link } from 'react-router-dom'
+import type { AuctionDto } from '../../api/types'
 import { ApiError } from '../../api/client'
 import { Button } from '../../components/ui/Button'
+import { Countdown } from '../../components/ui/Countdown'
+import { PriceDisplay } from '../../components/ui/PriceDisplay'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { StatusDot } from '../../components/ui/StatusDot'
 import { useTheme } from '../../lib/theme'
+import { auctionStatusLabel, auctionStatusShape, auctionTypeLabel } from '../auctions/auctionMeta'
+import { useAuctions } from '../auctions/useAuctions'
+import { useCountdown } from '../auctions/useCountdown'
 import { ListingCard } from './ListingCard'
 import { useListings } from './useListings'
 
-function Hero() {
+function LiveCountdown({ endsAt }: { endsAt: string }) {
+  const { h, m, s } = useCountdown(endsAt)
+  return <Countdown h={h} m={m} s={s} label="Koniec za" />
+}
+
+function LiveAuctionPanel({ auction }: { auction: AuctionDto }) {
+  return (
+    <div className="rounded-lg border border-line bg-layer p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <StatusDot
+          shape={auctionStatusShape[auction.status]}
+          label={auctionStatusLabel[auction.status]}
+        />
+        <span className="text-xs text-ink-3">{auctionTypeLabel[auction.type]}</span>
+      </div>
+      <PriceDisplay
+        amount={auction.currentPriceAmount}
+        currency={auction.currentPriceCurrency}
+        label="Cena bieżąca"
+      />
+      <div className="mt-4">
+        <LiveCountdown endsAt={auction.endsAt} />
+      </div>
+      <Link
+        to={`/auctions/${auction.id}`}
+        className="mt-6 block rounded bg-primary-solid px-4 py-2 text-center text-sm font-medium text-primary-text transition-opacity hover:opacity-90"
+      >
+        Przejdź do aukcji
+      </Link>
+    </div>
+  )
+}
+
+function HeroRight() {
   const { theme } = useTheme()
+  const { data: auctions, isPending } = useAuctions()
+
+  if (isPending) {
+    return (
+      <div className="space-y-4 rounded-lg border border-line bg-layer p-6">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="mx-auto h-14 w-48" />
+        <Skeleton className="mx-auto h-8 w-32" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    )
+  }
+
+  const live = (auctions ?? [])
+    .filter(a => a.status === 'RUNNING')
+    .sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0]
+
+  if (live) return <LiveAuctionPanel auction={live} />
+
+  return (
+    <img
+      src={theme === 'dark' ? '/illustrations/hero.svg' : '/illustrations/hero-light.svg'}
+      alt=""
+      aria-hidden="true"
+      className="w-full"
+    />
+  )
+}
+
+function Hero() {
   return (
     <div className="mb-12 grid grid-cols-12 items-center gap-8">
       <div className="col-span-12 sm:col-span-6 lg:col-span-5">
@@ -22,12 +92,7 @@ function Hero() {
         </Link>
       </div>
       <div className="col-span-12 sm:col-span-6 lg:col-span-7">
-        <img
-          src={theme === 'dark' ? '/illustrations/hero.svg' : '/illustrations/hero-light.svg'}
-          alt=""
-          aria-hidden="true"
-          className="w-full"
-        />
+        <HeroRight />
       </div>
     </div>
   )
