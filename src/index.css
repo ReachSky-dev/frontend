@@ -2,7 +2,11 @@
 @import "@fontsource-variable/inter";
 @import "./styles/tokens.css";
 
-/* ── Globalny reset ───────────────────────────────────────────── */
+/* ── color-scheme — natywne kontrolki (scrollbary, datetime) ─────────────── */
+:root                    { color-scheme: dark;  }
+:root[data-theme="light"] { color-scheme: light; }
+
+/* ── Globalny reset ──────────────────────────────────────────────────────── */
 @layer base {
   *,
   *::before,
@@ -10,11 +14,19 @@
     box-sizing: border-box;
   }
 
-  /* color-scheme: dark — przeglądarka renderuje natywne kontrolki
-     (ikony datetime, scrollbary, date picker popup) w trybie ciemnym.
-     Bez tego ikona kalendarza jest ciemna na ciemnym tle → niewidoczna. */
-  :root {
-    color-scheme: dark;
+  /* Przejście przy zmianie motywu — 200 ms na kolorach.
+     Tailwind transition-* na komponentach nadpisuje to własnym czasem. */
+  *, *::before, *::after {
+    transition-property: background-color, color, border-color, fill, stroke;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
+
+  /* Wyłącz przejścia dla użytkowników z prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition: none !important;
+    }
   }
 
   body {

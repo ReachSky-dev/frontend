@@ -2,6 +2,8 @@ import { useAuth } from 'react-oidc-context'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { AuthControl } from '../features/auth/AuthControl'
 import { getRealmRoles } from '../features/auth/roles'
+import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { useTheme } from '../lib/theme'
 
 function navClass({ isActive }: { isActive: boolean }) {
   return `text-sm transition-colors ${
@@ -12,6 +14,7 @@ function navClass({ isActive }: { isActive: boolean }) {
 export function AppLayout() {
   const auth = useAuth()
   const isSeller = getRealmRoles(auth.user).includes('SELLER')
+  const { theme } = useTheme()
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas text-ink-1">
@@ -22,11 +25,14 @@ export function AppLayout() {
 
           {/* Logo — 2 kolumny */}
           <div className="col-span-2">
-            <Link
-              to="/"
-              className="text-base font-semibold text-ink-1 transition-colors hover:text-ink-2"
-            >
-              ReachSky
+            <Link to="/" className="inline-flex items-center">
+              <img
+                src={theme === 'dark'
+                  ? '/brand/reachsky-logo-dark.svg'
+                  : '/brand/reachsky-logo-light.svg'}
+                alt="ReachSky"
+                className="h-7 w-auto"
+              />
             </Link>
           </div>
 
@@ -49,7 +55,8 @@ export function AppLayout() {
           </nav>
 
           {/* Konto — 3 kolumny, wyrównane do prawej */}
-          <div className="col-span-3 flex justify-end">
+          <div className="col-span-3 flex items-center justify-end gap-2">
+            <ThemeToggle />
             <AuthControl />
           </div>
 

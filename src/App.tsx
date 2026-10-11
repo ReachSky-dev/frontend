@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { ThemeProvider } from './lib/theme'
 import { AppLayout } from './app/AppLayout'
 import { NotFoundPage } from './app/NotFoundPage'
 import { CallbackPage } from './features/auth/CallbackPage'
@@ -15,6 +16,7 @@ import { HistoryPage } from './features/history/HistoryPage'
 
 function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <Routes>
         <Route path="callback" element={<CallbackPage />} />
@@ -53,6 +55,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }
 
