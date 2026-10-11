@@ -1,8 +1,37 @@
+import { Link } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { Button } from '../../components/ui/Button'
 import { Skeleton } from '../../components/ui/Skeleton'
+import { useTheme } from '../../lib/theme'
 import { ListingCard } from './ListingCard'
 import { useListings } from './useListings'
+
+function Hero() {
+  const { theme } = useTheme()
+  return (
+    <div className="mb-12 grid grid-cols-12 items-center gap-8">
+      <div className="col-span-12 sm:col-span-6 lg:col-span-5">
+        <p className="mb-6 text-xl font-medium leading-snug text-ink-1 sm:text-2xl">
+          Miejsca w busie, pokoje na jutro, terminy last-minute — licytowane zanim przepadną.
+        </p>
+        <Link
+          to="/auctions"
+          className="inline-block rounded bg-primary-solid px-5 py-2.5 text-sm font-medium text-primary-text transition-opacity hover:opacity-90"
+        >
+          Przeglądaj aukcje
+        </Link>
+      </div>
+      <div className="col-span-12 sm:col-span-6 lg:col-span-7">
+        <img
+          src={theme === 'dark' ? '/illustrations/hero.svg' : '/illustrations/hero-light.svg'}
+          alt=""
+          aria-hidden="true"
+          className="w-full"
+        />
+      </div>
+    </div>
+  )
+}
 
 function ListingsSkeleton() {
   return (
@@ -32,7 +61,9 @@ export function ListingsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold text-ink-1">Oferty</h1>
+      <Hero />
+
+      <h2 className="mb-4 text-lg font-medium text-ink-1">Aktywne oferty</h2>
 
       {/* Stan: ładowanie */}
       {isPending && <ListingsSkeleton />}
