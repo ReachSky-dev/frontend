@@ -62,9 +62,6 @@ function TabEmpty({ message }: { message: string }) {
 
 // ── Wspólne kolumny tabeli historii ──────────────────────────────────────────
 function useAuctionColumns(currentUserId: string | undefined, isWon?: boolean): Column<AuctionDto>[] {
-  const navigate = useNavigate()
-  void navigate // zapobieganie unused — navigate używany przez onRowClick, nie tutaj
-
   return [
     {
       key: 'status',
