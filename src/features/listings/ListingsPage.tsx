@@ -7,7 +7,7 @@ import { PriceDisplay } from '../../components/ui/PriceDisplay'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { StatusDot } from '../../components/ui/StatusDot'
 import { useTheme } from '../../lib/theme'
-import { auctionStatusLabel, auctionStatusShape, auctionTypeLabel } from '../auctions/auctionMeta'
+import { auctionStatusShape, auctionTypeLabel } from '../auctions/auctionMeta'
 import { useAuctions } from '../auctions/useAuctions'
 import { useCountdown } from '../auctions/useCountdown'
 import { ListingCard } from './ListingCard'
@@ -18,45 +18,67 @@ function LiveCountdown({ endsAt }: { endsAt: string }) {
   return <Countdown h={h} m={m} s={s} label="Koniec za" />
 }
 
-function LiveAuctionPanel({ auction }: { auction: AuctionDto }) {
+function LiveAuctionPanel({ auction, title }: { auction: AuctionDto; title?: string }) {
   return (
-    <div className="rounded-lg border border-line bg-layer p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <StatusDot
-          shape={auctionStatusShape[auction.status]}
-          label={auctionStatusLabel[auction.status]}
-        />
+    <div className="overflow-hidden rounded-lg border border-line bg-layer">
+      {/* Nagłówek — sygnalizuje że to właśnie ta aukcja ucieka najszybciej */}
+      <div className="flex items-center justify-between border-b border-line px-6 py-3">
+        <div className="flex items-center gap-2">
+          <StatusDot shape={auctionStatusShape[auction.status]} label="" />
+          <span className="text-sm font-medium text-price">Gorąca aukcja</span>
+        </div>
         <span className="text-xs text-ink-3">{auctionTypeLabel[auction.type]}</span>
       </div>
-      <PriceDisplay
-        amount={auction.currentPriceAmount}
-        currency={auction.currentPriceCurrency}
-        label="Cena bieżąca"
-      />
-      <div className="mt-4">
-        <LiveCountdown endsAt={auction.endsAt} />
+
+      <div className="p-6">
+        {/* Tytuł licytowanego zasobu */}
+        {title && (
+          <p className="mb-5 text-base font-medium leading-snug text-ink-1">{title}</p>
+        )}
+
+        {/* Cena i odliczanie */}
+        <div className="flex items-end justify-between gap-4">
+          <PriceDisplay
+            amount={auction.currentPriceAmount}
+            currency={auction.currentPriceCurrency}
+            label="Cena bieżąca"
+          />
+          <div className="pb-1">
+            <LiveCountdown endsAt={auction.endsAt} />
+          </div>
+        </div>
+
+        <Link
+          to={`/auctions/${auction.id}`}
+          className="mt-6 block rounded bg-primary-solid px-4 py-2 text-center text-sm font-medium text-primary-text transition-opacity hover:opacity-90"
+        >
+          Licytuj teraz
+        </Link>
       </div>
-      <Link
-        to={`/auctions/${auction.id}`}
-        className="mt-6 block rounded bg-primary-solid px-4 py-2 text-center text-sm font-medium text-primary-text transition-opacity hover:opacity-90"
-      >
-        Przejdź do aukcji
-      </Link>
     </div>
   )
 }
 
 function HeroRight() {
   const { theme } = useTheme()
-  const { data: auctions, isPending } = useAuctions()
+  const { data: auctions, isPending: auctionsPending } = useAuctions()
+  const { data: listings } = useListings()
 
-  if (isPending) {
+  if (auctionsPending) {
     return (
-      <div className="space-y-4 rounded-lg border border-line bg-layer p-6">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="mx-auto h-14 w-48" />
-        <Skeleton className="mx-auto h-8 w-32" />
-        <Skeleton className="h-9 w-full" />
+      <div className="overflow-hidden rounded-lg border border-line bg-layer">
+        <div className="flex items-center justify-between border-b border-line px-6 py-3">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+        <div className="space-y-5 p-6">
+          <Skeleton className="h-4 w-3/4" />
+          <div className="flex items-end justify-between gap-4">
+            <Skeleton className="h-14 w-40" />
+            <Skeleton className="h-8 w-28" />
+          </div>
+          <Skeleton className="h-9 w-full" />
+        </div>
       </div>
     )
   }
@@ -65,7 +87,10 @@ function HeroRight() {
     .filter(a => a.status === 'RUNNING')
     .sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0]
 
-  if (live) return <LiveAuctionPanel auction={live} />
+  if (live) {
+    const title = (listings ?? []).find(l => l.id === live.listingId)?.title
+    return <LiveAuctionPanel auction={live} title={title} />
+  }
 
   return (
     <img
