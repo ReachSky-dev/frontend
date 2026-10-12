@@ -5,64 +5,81 @@ on:
     branches: [main]
 
 jobs:
-  release:
+  docker:
+    name: Build · Scan · Publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image locally
+      # Budujemy obraz lokalnie (push: false) — dopiero po przejściu skanu Trivy
+      # trafia na Docker Hub. W ten sposób nigdy nie publikujemy obrazu z
+      # podatnościami HIGH/CRITICAL.
+      - name: Build image (local, no push)
         uses: docker/build-push-action@v6
         with:
           context: .
+          push: false
           load: true
-          tags: reachsky-frontend:${{ github.sha }}
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/reachsky-frontend:${{ github.sha }}
+            ${{ vars.DOCKERHUB_USERNAME }}/reachsky-frontend:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to:   type=gha,mode=max
 
-      - name: Scan — Trivy (gate HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+      - name: Scan with Trivy — gate HIGH and CRITICAL
+        uses: aquasecurity/trivy-action@0.36.0
         with:
-          image-ref: reachsky-frontend:${{ github.sha }}
+          image-ref: ${{ vars.DOCKERHUB_USERNAME }}/reachsky-frontend:${{ github.sha }}
           format: table
-          exit-code: 1
-          severity: HIGH,CRITICAL
+          exit-code: '1'
           ignore-unfixed: true
+          severity: HIGH,CRITICAL
 
-      - name: Login to Docker Hub
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push to Docker Hub
-        uses: docker/build-push-action@v6
+        id: push
+        run: |
+          IMAGE="${{ vars.DOCKERHUB_USERNAME }}/reachsky-frontend"
+          docker push "${IMAGE}:${{ github.sha }}"
+          docker push "${IMAGE}:latest"
+          # Digest wyciągamy po push — RepoDigests wypełnia się dopiero po kontakcie z registry.
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+            "${IMAGE}:${{ github.sha }}" | sed 's/[^@]*@//')
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Wyzwól deploy w repo infra
+        uses: peter-evans/repository-dispatch@v3
         with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/reachsky-frontend:${{ github.sha }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/reachsky-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          token:          ${{ secrets.INFRA_DISPATCH_TOKEN }}
+          repository:     ReachSky-dev/infra
+          event-type:     deploy-frontend
+          client-payload: >-
+            {"digest": "${{ steps.push.outputs.digest }}",
+             "commit": "${{ github.sha }}"}
 
       - name: Job summary
-        if: success()
         run: |
-          SIZE=$(docker image inspect reachsky-frontend:${{ github.sha }} \
-            --format '{{.Size}}' \
-            | awk '{printf "%.1f MB", $1/1024/1024}')
-          {
-            echo "## Release"
-            echo "| | |"
-            echo "|---|---|"
-            echo "| Obraz | \`${{ secrets.DOCKERHUB_USERNAME }}/reachsky-frontend\` |"
-            echo "| Tagi | \`${{ github.sha }}\` · \`latest\` |"
-            echo "| Rozmiar | \`${SIZE}\` |"
-            echo "| Commit | ${{ github.event.head_commit.message }} |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          SIZE=$(docker image inspect \
+            ${{ vars.DOCKERHUB_USERNAME }}/reachsky-frontend:${{ github.sha }} \
+            --format='{{.Size}}' | awk '{printf "%.0f MB", $1/1024/1024}')
+          echo "## Docker image published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Rozmiar obrazu** | ${SIZE} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Tag SHA** | \`${{ vars.DOCKERHUB_USERNAME }}/reachsky-frontend:${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Tag latest** | \`${{ vars.DOCKERHUB_USERNAME }}/reachsky-frontend:latest\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Commit** | ${{ github.sha }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Autor** | ${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
