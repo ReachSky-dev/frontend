@@ -5,6 +5,7 @@ import type { AuctionDto, BidDto } from '../../api/types'
 import { Button } from '../../components/ui/Button'
 import { formatDateTime } from '../../lib/datetime'
 import { formatMoney } from '../../lib/money'
+import { parseBidAmount } from './bidValidation'
 import { useBidHistory } from './useBidHistory'
 import { usePlaceBid } from './usePlaceBid'
 import { useSetProxyBid } from './useSetProxyBid'
@@ -49,8 +50,8 @@ function BidForm({ auction }: { auction: AuctionDto }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const minor = Math.round(parseFloat(amount) * 100)
-    if (!amount || isNaN(minor) || minor <= 0) {
+    const minor = parseBidAmount(amount)
+    if (minor === null) {
       setFieldError('Podaj kwotę stawki.')
       return
     }
@@ -119,8 +120,8 @@ function ProxyForm({ auction }: { auction: AuctionDto }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const minor = Math.round(parseFloat(maxAmount) * 100)
-    if (!maxAmount || isNaN(minor) || minor <= 0) {
+    const minor = parseBidAmount(maxAmount)
+    if (minor === null) {
       setProxyError('Podaj kwotę maksymalną.')
       return
     }
