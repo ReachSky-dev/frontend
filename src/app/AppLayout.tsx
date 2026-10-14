@@ -1,6 +1,7 @@
 import { useAuth } from 'react-oidc-context'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { AuthControl } from '../features/auth/AuthControl'
+import { DemoBar } from '../features/auth/DemoBar'
 import { getRealmRoles } from '../features/auth/roles'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { useTheme } from '../lib/theme'
@@ -18,6 +19,9 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas text-ink-1">
+
+      {/* ── Pasek demo ────────────────────────────────────────── */}
+      <DemoBar />
 
       {/* ── Nagłówek ─────────────────────────────────────────── */}
       <header className="border-b border-line bg-canvas">
