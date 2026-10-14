@@ -13,6 +13,7 @@ import { ListingsPage } from './features/listings/ListingsPage'
 import { NewListingPage } from './features/listings/NewListingPage'
 import { SellerDashboardPage } from './features/seller/SellerDashboardPage'
 import { HistoryPage } from './features/history/HistoryPage'
+import { OrdersPage } from './features/orders/OrdersPage'
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
           <Route path="auctions" element={<AuctionsPage />} />
           <Route path="auctions/:id" element={<AuctionDetailPage />} />
           <Route path="history" element={<HistoryPage />} />
+          <Route path="orders" element={<OrdersPage />} />
           <Route
             path="seller"
             element={

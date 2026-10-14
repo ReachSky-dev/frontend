@@ -47,6 +47,13 @@ export type BidDto = Required<_Bid>
 export type PlaceBidRequest    = components['schemas']['PlaceBidRequest']
 export type SetProxyBidRequest = components['schemas']['SetProxyBidRequest']
 
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+// OrderResponse: wszystkie pola non-null w praktyce (springdoc generuje jako opcjonalne)
+type _Order = components['schemas']['OrderResponse']
+export type OrderDto    = Required<_Order>
+export type OrderStatus = NonNullable<_Order['status']>
+
 // ── Errors ────────────────────────────────────────────────────────────────────
 
 export type ProblemDetail = components['schemas']['ProblemDetail']

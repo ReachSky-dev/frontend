@@ -47,6 +47,11 @@ export function AppLayout() {
             <NavLink to="/history" className={navClass}>
               Historia
             </NavLink>
+            {auth.isAuthenticated && (
+              <NavLink to="/orders" className={navClass}>
+                Zamówienia
+              </NavLink>
+            )}
             {isSeller && (
               <NavLink to="/seller" className={navClass}>
                 Panel sprzedawcy
